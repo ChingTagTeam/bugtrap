@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#1d1d20;color:#f2f2ef;font-family:'Archivo',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  ::selection{background:#83C818;color:#15150f}
+  @keyframes bt-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+  @keyframes bt-glow{0%,100%{opacity:.35}50%{opacity:.7}}
+  @keyframes bt-blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  @keyframes bt-spin{to{transform:rotate(360deg)}}
+  @keyframes bt-grad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  @keyframes bt-shimmer{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+  @keyframes bt-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  @keyframes bt-pulse{0%{box-shadow:0 0 0 0 rgba(131,200,24,.5)}70%{box-shadow:0 0 0 16px rgba(131,200,24,0)}100%{box-shadow:0 0 0 0 rgba(131,200,24,0)}}
+  @keyframes bt-rise{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+  @keyframes bt-flow{0%{left:-12%;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:100%;opacity:0}}
+  @keyframes bt-flowv{0%{top:-12%;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:100%;opacity:0}}
+  @keyframes bt-dash{to{background-position:32px 0}}
+  @keyframes bt-ring{0%{transform:scale(.55);opacity:.7}100%{transform:scale(2.1);opacity:0}}
+  @keyframes bt-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes bt-orbit{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</helmet>
+<div ref="{{ setRoot }}" style="position:relative;--lime:#83C818;--lime-bright:#a6f02e;--bg:#1d1d20;--bg2:#252529;--surf:#28282d;--surf2:#303036;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--tx:#f2f2ef;--tx2:#a3a3a8;--tx3:#6f6f76;--sec:#ff5d6c;--cor:#83C818;--read:#54b8ff;font-family:'Archivo',sans-serif;color:var(--tx);background:var(--bg);min-height:100vh;overflow:hidden">
+
+  <canvas ref="{{ setCanvas }}" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>
+  <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 600px at 78% 8%,rgba(131,200,24,.10),transparent 60%),radial-gradient(700px 500px at 10% 90%,rgba(84,184,255,.06),transparent 60%)"></div>
+
+  <!-- HERO -->
+  <header style="position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:78px 32px 64px;display:grid;grid-template-columns:1.02fr 1.08fr;gap:54px;align-items:center">
+    <div>
+      <div data-reveal style="display:flex;align-items:center;gap:12px;margin-bottom:30px">
+        <img src="uploads/BugTrap-logo.png" alt="BugTrap" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(131,200,24,.45))">
+        <span style="font-weight:800;font-size:22px;letter-spacing:-.02em">BugTrap</span>
+      </div>
+      <h1 data-reveal data-reveal-delay="60" style="font-size:64px;line-height:1.02;font-weight:800;letter-spacing:-.035em;margin:0 0 20px">Ship fast.<br>Merge with<br><span style="position:relative;white-space:nowrap"><span style="background:linear-gradient(100deg,var(--lime),var(--lime-bright),var(--lime));background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:bt-grad 5s linear infinite">confidence.</span></span></h1>
+      <p data-reveal data-reveal-delay="120" style="font-size:19px;line-height:1.55;color:var(--tx2);margin:0 0 34px;max-width:460px;font-weight:400">AI ships code faster than humans can review it. BugTrap reviews every change and hands you one clear verdict before it merges.</p>
+      <div data-reveal data-reveal-delay="180" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <a href="BugTrap-Product.dc.html" data-magnetic style="display:inline-flex;align-items:center;gap:9px;background:var(--lime);color:#15150f;text-decoration:none;font-size:16px;font-weight:700;padding:15px 26px;border-radius:11px;box-shadow:0 6px 26px rgba(131,200,24,.3);transition:box-shadow .25s,transform .1s">Scan my code <span>&rarr;</span></a>
+        <a href="BugTrap-Architecture.dc.html" style="display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--tx);text-decoration:none;font-size:16px;font-weight:600;padding:15px 24px;border-radius:11px;transition:background .2s,border-color .2s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='rgba(255,255,255,.04)'">See how it works</a>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE SCANNER CARD -->
+    <div ref="{{ setTilt }}" data-reveal data-reveal-delay="120" style="position:relative;perspective:1400px">
+      <div ref="{{ setTiltInner }}" style="position:relative;border-radius:16px;background:linear-gradient(180deg,#202024,#1a1a1d);border:1px solid var(--line2);box-shadow:0 40px 90px -30px rgba(0,0,0,.7),0 0 0 1px rgba(131,200,24,.04);transform-style:preserve-3d;transition:transform .15s ease-out;overflow:hidden">
+        <div style="position:absolute;inset:0;border-radius:16px;pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)"></div>
+
+        <!-- card header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)">
+          <div style="display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--tx2)">
+            <span style="display:flex;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#3a3a40"></span><span style="width:11px;height:11px;border-radius:50%;background:#3a3a40"></span><span style="width:11px;height:11px;border-radius:50%;background:#3a3a40"></span></span>
+            <span style="margin-left:6px">api/users.ts</span>
+          </div>
+          <div ref="{{ setStatus }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--tx3);display:flex;align-items:center;gap:7px"><span ref="{{ setStatusDot }}" style="width:7px;height:7px;border-radius:50%;background:var(--tx3)"></span><span ref="{{ setStatusTxt }}">READY</span></div>
+        </div>
+
+        <!-- agent meters -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border-bottom:1px solid var(--line)">
+          <div style="background:#1c1c1f;padding:11px 13px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:2px;background:var(--sec)"></span><span style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--tx2)">SECURITY</span><span ref="{{ setSecCount }}" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3)">0</span></div>
+            <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden"><div ref="{{ setSecBar }}" style="height:100%;width:0%;background:var(--sec);border-radius:3px;transition:width .25s ease-out"></div></div>
+          </div>
+          <div style="background:#1c1c1f;padding:11px 13px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:2px;background:var(--cor)"></span><span style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--tx2)">CORRECTNESS</span><span ref="{{ setCorCount }}" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3)">0</span></div>
+            <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden"><div ref="{{ setCorBar }}" style="height:100%;width:0%;background:var(--cor);border-radius:3px;transition:width .25s ease-out"></div></div>
+          </div>
+          <div style="background:#1c1c1f;padding:11px 13px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:2px;background:var(--read)"></span><span style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--tx2)">READABILITY</span><span ref="{{ setReadCount }}" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3)">0</span></div>
+            <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden"><div ref="{{ setReadBar }}" style="height:100%;width:0%;background:var(--read);border-radius:3px;transition:width .25s ease-out"></div></div>
+          </div>
+        </div>
+
+        <!-- code with scan beam -->
+        <div style="position:relative;padding:14px 0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.85;background:#161618">
+          <div ref="{{ setBeam }}" style="position:absolute;left:0;right:0;top:0;height:54px;pointer-events:none;opacity:0;background:linear-gradient(180deg,transparent,rgba(131,200,24,.13) 70%,rgba(131,200,24,.34));border-bottom:1.5px solid var(--lime);box-shadow:0 0 30px rgba(131,200,24,.4);z-index:3"></div>
+          <div style="position:relative;z-index:2">
+            <div class="ln" style="padding:0 16px;color:#6f6f76"><span style="display:inline-block;width:26px;color:#45454c">1</span><span style="color:#c98fff">import</span> { db } <span style="color:#c98fff">from</span> <span style="color:#9fe06a">"./db"</span>;</div>
+            <div class="ln" style="padding:0 16px;color:#6f6f76"><span style="display:inline-block;width:26px;color:#45454c">2</span></div>
+            <div class="ln" style="padding:0 16px;color:#cfcfd4"><span style="display:inline-block;width:26px;color:#45454c">3</span><span style="color:#c98fff">export async function</span> <span style="color:#7cc7ff">getUser</span>(req, res) {</div>
+            <div class="ln" style="padding:0 16px;color:#cfcfd4"><span style="display:inline-block;width:26px;color:#45454c">4</span>  <span style="color:#c98fff">const</span> id = req.params.id;</div>
+            <div class="ln" data-bug="sec" ref="{{ setLine6 }}" style="padding:0 16px;color:#cfcfd4;position:relative;transition:background .3s"><span style="display:inline-block;width:26px;color:#45454c">5</span>  <span style="color:#c98fff">const</span> query = <span style="color:#9fe06a">"SELECT * FROM users WHERE id = "</span> + id;</div>
+            <div class="ln" data-bug="cor" ref="{{ setLine7 }}" style="padding:0 16px;color:#cfcfd4;position:relative;transition:background .3s"><span style="display:inline-block;width:26px;color:#45454c">6</span>  <span style="color:#c98fff">const</span> rows = db.<span style="color:#7cc7ff">query</span>(query);</div>
+            <div class="ln" style="padding:0 16px;color:#6f6f76"><span style="display:inline-block;width:26px;color:#45454c">7</span></div>
+            <div class="ln" data-bug="read" ref="{{ setLine9 }}" style="padding:0 16px;color:#cfcfd4;position:relative;transition:background .3s"><span style="display:inline-block;width:26px;color:#45454c">8</span>  <span style="color:#c98fff">if</span> (rows == <span style="color:#c98fff">null</span>) <span style="color:#c98fff">return</span> res.<span style="color:#7cc7ff">send</span>(<span style="color:#f0b454">404</span>);</div>
+            <div class="ln" style="padding:0 16px;color:#cfcfd4"><span style="display:inline-block;width:26px;color:#45454c">9</span>  <span style="color:#c98fff">const</span> user = rows[<span style="color:#f0b454">0</span>];</div>
+            <div class="ln" style="padding:0 16px;color:#cfcfd4"><span style="display:inline-block;width:26px;color:#45454c">10</span>  res.<span style="color:#7cc7ff">json</span>({ id: user.id, name: user.name });</div>
+            <div class="ln" style="padding:0 16px;color:#cfcfd4"><span style="display:inline-block;width:26px;color:#45454c">11</span>}</div>
+          </div>
+        </div>
+
+        <!-- findings rail -->
+        <div ref="{{ setFindings }}" style="border-top:1px solid var(--line);background:#1a1a1d;height:188px;overflow-y:auto"></div>
+
+        <!-- verdict gate -->
+        <div ref="{{ setVerdict }}" style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-top:1px solid var(--line);background:#1c1c1f;transition:background .4s">
+          <div ref="{{ setVerdictIcon }}" style="width:34px;height:34px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1px solid var(--line2);transition:all .4s">
+            <span ref="{{ setVerdictSpin }}" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--tx3);border-top-color:var(--lime);animation:bt-spin .8s linear infinite"></span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div ref="{{ setVerdictTitle }}" style="font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--tx2)">Coordinator reconciling 3 agents&hellip;</div>
+            <div ref="{{ setVerdictSub }}" style="font-size:12px;color:var(--tx3);font-family:'JetBrains Mono',monospace;margin-top:2px">deduping overlaps &middot; resolving severity</div>
+          </div>
+          <div ref="{{ setVerdictTag }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;padding:6px 11px;border-radius:7px;background:rgba(255,255,255,.05);color:var(--tx3);border:1px solid var(--line2);white-space:nowrap;transition:all .4s">PENDING</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- STATS BAND -->
+  <section style="position:relative;z-index:2;max-width:1200px;margin:30px auto 0;padding:0 32px">
+    <div data-reveal style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden">
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="3" data-suffix="" style="font-size:42px;font-weight:800;letter-spacing:-.03em">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">specialist agents per review</div></div>
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="1" data-suffix="" style="font-size:42px;font-weight:800;letter-spacing:-.03em;color:var(--lime)">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">reconciled verdict, no noise</div></div>
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="28" data-prefix="<" data-suffix="s" style="font-size:42px;font-weight:800;letter-spacing:-.03em">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">typical scan, file to verdict</div></div>
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="100" data-suffix="%" style="font-size:42px;font-weight:800;letter-spacing:-.03em">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">of diffs reviewed, every push</div></div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" style="position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:120px 32px 40px">
+    <div data-reveal style="text-align:center;max-width:680px;margin:0 auto 64px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--lime);margin-bottom:16px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:bt-glow 2s infinite"></span>THE REVIEW LOOP</div>
+      <h2 style="font-size:44px;font-weight:800;letter-spacing:-.03em;margin:0 0 16px;line-height:1.05">Three lenses. One verdict.</h2>
+      <p style="font-size:18px;color:var(--tx2);line-height:1.55;margin:0">Every change is inspected in parallel from three distinct angles. A coordinating agent reconciles the findings &mdash; deduping overlaps and resolving severity disagreements &mdash; into a single prioritized call.</p>
+    </div>
+
+    <div data-reveal style="position:relative;display:grid;grid-template-columns:0.85fr 1.4fr 0.85fr;gap:24px;align-items:center">
+      <!-- animated flow connectors -->
+      <div style="position:absolute;top:50%;left:25%;width:6%;height:18px;transform:translateY(-50%);z-index:3;pointer-events:none">
+        <div style="position:absolute;top:50%;left:0;right:0;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,rgba(131,200,24,.55) 0 6px,transparent 6px 12px);background-size:18px 2px;animation:bt-dash .55s linear infinite"></div>
+        <div style="position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:var(--lime-bright);box-shadow:0 0 11px var(--lime);transform:translateY(-50%);animation:bt-flow 1.7s linear infinite"></div>
+      </div>
+      <div style="position:absolute;top:50%;left:71%;width:6%;height:18px;transform:translateY(-50%);z-index:3;pointer-events:none">
+        <div style="position:absolute;top:50%;left:0;right:0;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,rgba(131,200,24,.55) 0 6px,transparent 6px 12px);background-size:18px 2px;animation:bt-dash .55s linear infinite"></div>
+        <div style="position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:var(--lime-bright);box-shadow:0 0 11px var(--lime);transform:translateY(-50%);animation:bt-flow 1.7s linear infinite .4s"></div>
+      </div>
+
+      <!-- input -->
+      <div style="display:flex;flex-direction:column;gap:14px;z-index:2">
+        <div style="display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surf);transition:transform .25s,border-color .25s" style-hover="transform:translateX(4px);border-color:var(--line2)"><span style="width:9px;height:9px;border-radius:2px;background:var(--tx2)"></span><div><div style="font-weight:700;font-size:15px">File</div><div style="font-size:12.5px;color:var(--tx3);font-family:'JetBrains Mono',monospace">single source file</div></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surf);transition:transform .25s,border-color .25s" style-hover="transform:translateX(4px);border-color:var(--line2)"><span style="width:9px;height:9px;border-radius:2px;background:var(--tx2)"></span><div><div style="font-weight:700;font-size:15px">Function</div><div style="font-size:12.5px;color:var(--tx3);font-family:'JetBrains Mono',monospace">a focused unit</div></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surf);transition:transform .25s,border-color .25s" style-hover="transform:translateX(4px);border-color:var(--line2)"><span style="width:9px;height:9px;border-radius:2px;background:var(--tx2)"></span><div><div style="font-weight:700;font-size:15px">Pull request</div><div style="font-size:12.5px;color:var(--tx3);font-family:'JetBrains Mono',monospace">full diff &amp; context</div></div></div>
+      </div>
+
+      <!-- agents -->
+      <div style="position:relative;display:grid;grid-template-columns:1fr;gap:14px;padding:24px;border:1px solid var(--line2);border-radius:18px;background:linear-gradient(180deg,rgba(131,200,24,.04),transparent);box-shadow:0 0 40px -18px rgba(131,200,24,.35);z-index:2">
+        <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;color:var(--lime)">PARALLEL ANALYSIS</div>
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;padding:15px 17px;margin-top:22px;border:1px solid rgba(255,93,108,.3);border-radius:13px;background:rgba(255,93,108,.05);transition:transform .25s" style-hover="transform:translateY(-3px)"><span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,93,108,.16) 50%,transparent 65%);transform:translateX(-120%);animation:bt-shimmer 4.2s ease-in-out infinite;pointer-events:none"></span><span style="position:relative;width:34px;height:34px;border-radius:9px;background:rgba(255,93,108,.14);color:var(--sec);display:flex;align-items:center;justify-content:center;flex:none"><span style="position:absolute;inset:0;border-radius:9px;border:1px solid rgba(255,93,108,.5);animation:bt-ring 2.4s ease-out infinite"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span><div style="flex:1;position:relative"><div style="font-weight:700;font-size:15.5px">Security agent</div><div style="font-size:13px;color:var(--tx2)">injection, secrets, authz, unsafe data flow</div></div></div>
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;padding:15px 17px;border:1px solid rgba(131,200,24,.3);border-radius:13px;background:rgba(131,200,24,.05);transition:transform .25s" style-hover="transform:translateY(-3px)"><span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(131,200,24,.16) 50%,transparent 65%);transform:translateX(-120%);animation:bt-shimmer 4.2s ease-in-out infinite .5s;pointer-events:none"></span><span style="position:relative;width:34px;height:34px;border-radius:9px;background:rgba(131,200,24,.14);color:var(--cor);display:flex;align-items:center;justify-content:center;flex:none"><span style="position:absolute;inset:0;border-radius:9px;border:1px solid rgba(131,200,24,.5);animation:bt-ring 2.4s ease-out infinite .8s"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span><div style="flex:1;position:relative"><div style="font-weight:700;font-size:15.5px">Correctness agent</div><div style="font-size:13px;color:var(--tx2)">logic, edge cases, async, error handling</div></div></div>
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;padding:15px 17px;border:1px solid rgba(84,184,255,.3);border-radius:13px;background:rgba(84,184,255,.05);transition:transform .25s" style-hover="transform:translateY(-3px)"><span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(84,184,255,.16) 50%,transparent 65%);transform:translateX(-120%);animation:bt-shimmer 4.2s ease-in-out infinite 1s;pointer-events:none"></span><span style="position:relative;width:34px;height:34px;border-radius:9px;background:rgba(84,184,255,.14);color:var(--read);display:flex;align-items:center;justify-content:center;flex:none"><span style="position:absolute;inset:0;border-radius:9px;border:1px solid rgba(84,184,255,.5);animation:bt-ring 2.4s ease-out infinite 1.6s"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span><div style="flex:1;position:relative"><div style="font-weight:700;font-size:15.5px">Readability agent</div><div style="font-size:13px;color:var(--tx2)">clarity, naming, structure, maintainability</div></div></div>
+      </div>
+
+      <!-- coordinator + verdict -->
+      <div style="display:flex;flex-direction:column;gap:16px;z-index:2">
+        <div style="padding:20px;border:1px solid var(--lime);border-radius:16px;background:rgba(131,200,24,.06);position:relative;overflow:hidden;box-shadow:0 0 36px -14px rgba(131,200,24,.5)">
+          <div style="position:absolute;top:-34px;right:-34px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(131,200,24,.28),transparent 70%);animation:bt-glow 3s infinite"></div>
+          <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;margin-bottom:13px">
+            <span style="position:absolute;inset:-6px;border-radius:50%;border:1px dashed rgba(131,200,24,.45);animation:bt-orbit 9s linear infinite"></span>
+            <img src="uploads/BugTrap-logo.png" alt="" style="width:30px;height:30px;object-fit:contain;animation:bt-bob 3.4s ease-in-out infinite;filter:drop-shadow(0 0 8px rgba(131,200,24,.6))">
+          </div>
+          <div style="font-weight:800;font-size:17px;margin-bottom:5px">Coordinator</div>
+          <div style="font-size:13.5px;color:var(--tx2);line-height:1.5">Reconciles the three reports &mdash; merges duplicates, settles severity conflicts, ranks by impact.</div>
+        </div>
+        <div style="padding:18px 20px;border:1px solid var(--line2);border-radius:16px;background:var(--surf2);display:flex;align-items:center;gap:12px">
+          <span style="width:11px;height:11px;border-radius:50%;background:var(--lime);box-shadow:0 0 12px var(--lime);flex:none;animation:bt-glow 2.2s infinite"></span>
+          <div><div style="font-weight:800;font-size:15px;letter-spacing:.02em">SAFE TO MERGE / BLOCKED</div><div style="font-size:12.5px;color:var(--tx3)">one decisive gate</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" style="position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:110px 32px 40px">
+    <div data-reveal style="margin-bottom:56px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--lime);margin-bottom:16px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:bt-glow 2s infinite"></span>WHAT YOU GET BACK</div>
+      <h2 style="font-size:44px;font-weight:800;letter-spacing:-.03em;margin:0;line-height:1.05;max-width:620px">A report you can act on, not a wall of warnings.</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+      <div data-reveal class="feat" style="grid-column:span 2;padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s;overflow:hidden;position:relative">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--lime);margin-bottom:18px">CONSENSUS &amp; DISAGREEMENT</div>
+        <h3 style="font-size:22px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">See where the agents agree &mdash; and where they don't.</h3>
+        <p style="color:var(--tx2);font-size:15px;line-height:1.55;margin:0 0 20px;max-width:460px">When 2 of 3 agents flag the same line, you know it's real. When they disagree on severity, the coordinator shows its reasoning instead of hiding it.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:7px 12px;border-radius:8px;background:rgba(255,93,108,.1);border:1px solid rgba(255,93,108,.25);color:#ff8a95"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>security</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:7px 12px;border-radius:8px;background:rgba(131,200,24,.1);border:1px solid rgba(131,200,24,.25);color:var(--lime)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>correctness</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--line2);color:var(--tx3)">2 of 3 flagged</span>
+        </div>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--lime);margin-bottom:18px">CONFIDENCE</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">A score on every finding.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0 0 18px">Each issue carries a calibrated confidence so you can triage signal from noise instantly.</p>
+        <div style="display:flex;align-items:baseline;gap:4px"><span style="font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:700;color:var(--lime)">0.97</span><span style="color:var(--tx3);font-size:13px">confidence</span></div>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--lime);margin-bottom:18px">SEVERITY ORDER</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">Prioritized, not alphabetized.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0 0 16px">Critical blockers float to the top; nits sink. Fix what matters first.</p>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:54px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sec)">CRIT</span><div style="flex:1;height:6px;border-radius:3px;background:var(--sec);max-width:100%"></div></div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:54px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#f0b454">HIGH</span><div style="flex:1;height:6px;border-radius:3px;background:#f0b454;max-width:62%"></div></div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:54px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--read)">LOW</span><div style="flex:1;height:6px;border-radius:3px;background:var(--read);max-width:30%"></div></div>
+        </div>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--lime);margin-bottom:18px">INLINE PR COMMENTS</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">Comments land on the line.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0">Findings post as inline review comments, right where the code lives &mdash; no context-switching.</p>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(160deg,rgba(131,200,24,.08),var(--surf) 60%);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--lime);margin-bottom:18px">THE GATE</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">Safe to merge, or blocked. No maybes.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0 0 18px">BugTrap sits in your CI/CD as a gate. Green means ship. Red means here's exactly what to fix first.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:11px;background:rgba(131,200,24,.12);border:1px solid rgba(131,200,24,.35)"><span style="width:9px;height:9px;border-radius:50%;background:var(--lime)"></span><span style="font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--lime)">SAFE TO MERGE</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:11px;background:rgba(255,93,108,.1);border:1px solid rgba(255,93,108,.3)"><span style="width:9px;height:9px;border-radius:50%;background:var(--sec)"></span><span style="font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px;color:#ff8a95">BLOCKED &middot; 1 CRITICAL</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY GEMINI -->
+  <section style="position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:110px 32px 40px">
+    <div data-reveal style="border:1px solid var(--line);border-radius:22px;background:radial-gradient(700px 400px at 80% 0%,rgba(131,200,24,.1),transparent 60%),var(--surf);padding:54px;overflow:hidden;position:relative">
+      <img src="uploads/BugTrap-logo.png" alt="" style="position:absolute;top:-30px;right:-26px;width:200px;height:200px;object-fit:contain;opacity:.06;transform:rotate(8deg);pointer-events:none">
+      <div style="position:absolute;bottom:-60px;left:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(131,200,24,.1),transparent 70%);animation:bt-glow 4s infinite;pointer-events:none"></div>
+      <div style="max-width:640px;position:relative">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--lime);margin-bottom:18px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:bt-glow 2s infinite"></span>BUILT ON GOOGLE'S AI STACK</div>
+        <h2 style="font-size:40px;font-weight:800;letter-spacing:-.03em;margin:0 0 18px;line-height:1.08">Production-grade reasoning, orchestrated to agree.</h2>
+        <p style="font-size:17px;color:var(--tx2);line-height:1.6;margin:0">A single model guesses. A coordinated panel deliberates. BugTrap leans on the Gemini API for deep code reasoning, the Agent Development Kit to orchestrate the panel, and Vertex AI for enterprise-grade scale and governance.</p>
+      </div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px">
+        <div class="stackcard" style="padding:26px 24px;border:1px solid var(--line2);border-radius:15px;background:rgba(255,255,255,.02);transition:transform .3s,border-color .3s,box-shadow .3s">
+          <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <span style="position:absolute;inset:0;border-radius:12px;background:rgba(131,200,24,.1);border:1px solid rgba(131,200,24,.25)"></span>
+            <span style="position:relative;width:22px;height:22px;background:linear-gradient(135deg,var(--lime-bright),var(--lime));border-radius:6px;transform:rotate(45deg);box-shadow:0 0 14px rgba(131,200,24,.6);animation:bt-bob 3s ease-in-out infinite"></span>
+          </div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:7px">Gemini API</div><div style="color:var(--tx2);font-size:14px;line-height:1.5">Long-context code reasoning that understands the whole change, not just the line.</div>
+        </div>
+        <div class="stackcard" style="padding:26px 24px;border:1px solid var(--line2);border-radius:15px;background:rgba(255,255,255,.02);transition:transform .3s,border-color .3s,box-shadow .3s">
+          <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <span style="position:absolute;inset:0;border-radius:12px;background:rgba(131,200,24,.1);border:1px solid rgba(131,200,24,.25)"></span>
+            <span style="position:absolute;inset:-5px;border-radius:50%;border:1px dashed rgba(131,200,24,.4);animation:bt-orbit 8s linear infinite"></span>
+            <span style="position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--lime)"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--lime);opacity:.55"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--lime);opacity:.55"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--lime)"></span></span>
+          </div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:7px">Google ADK</div><div style="color:var(--tx2);font-size:14px;line-height:1.5">Orchestrates the three specialists and the coordinator as one reliable workflow.</div>
+        </div>
+        <div class="stackcard" style="padding:26px 24px;border:1px solid var(--line2);border-radius:15px;background:rgba(255,255,255,.02);transition:transform .3s,border-color .3s,box-shadow .3s">
+          <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <span style="position:absolute;inset:0;border-radius:12px;background:rgba(131,200,24,.1);border:1px solid rgba(131,200,24,.25)"></span>
+            <span style="position:relative;width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-bottom:23px solid var(--lime);filter:drop-shadow(0 0 8px rgba(131,200,24,.55));animation:bt-bob 3.4s ease-in-out infinite .4s"></span>
+          </div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:7px">Vertex AI</div><div style="color:var(--tx2);font-size:14px;line-height:1.5">Scales to every PR with the security, governance, and reliability teams require.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div style="height:60px"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:1100}}">
+class Component extends DCLogic {
+  renderVals() {
+    const r = (k) => (el) => { this['_' + k] = el; };
+    return {
+      setRoot: r('root'), setCanvas: r('canvas'), setNav: r('nav'),
+      setTilt: r('tilt'), setTiltInner: r('tiltInner'),
+      setStatus: r('status'), setStatusDot: r('statusDot'), setStatusTxt: r('statusTxt'),
+      setSecBar: r('secBar'), setCorBar: r('corBar'), setReadBar: r('readBar'),
+      setSecCount: r('secCount'), setCorCount: r('corCount'), setReadCount: r('readCount'),
+      setBeam: r('beam'), setLine6: r('line6'), setLine7: r('line7'), setLine9: r('line9'),
+      setFindings: r('findings'), setVerdict: r('verdict'), setVerdictIcon: r('verdictIcon'),
+      setVerdictSpin: r('verdictSpin'), setVerdictTitle: r('verdictTitle'),
+      setVerdictSub: r('verdictSub'), setVerdictTag: r('verdictTag')
+    };
+  }
+
+  componentDidMount() {
+    this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this._raf = [];
+    this._revealEls = [];
+    this._counterEls = [];
+    this.setupReveal();
+    this.setupCounters();
+    this.setupCardHovers();
+    this.setupMagnetic();
+    this.setupTilt();
+    this.setupCanvas();
+    this.setupScan();
+    this._tick = () => this.onScrollTick();
+    window.addEventListener('scroll', this._tick, { passive: true });
+    window.addEventListener('resize', this._tick, { passive: true });
+    // run a few times to catch late layout/font shifts
+    [0, 120, 400, 900].forEach((d) => setTimeout(this._tick, d));
+  }
+  onScrollTick() {
+    const vh = window.innerHeight;
+    this._revealEls = this._revealEls.filter((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.92 && r.bottom > 0) { el.style.opacity = '1'; el.style.transform = 'none'; return false; }
+      return true;
+    });
+    this._counterEls = this._counterEls.filter((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.85 && r.bottom > 0) { this.runCounter(el); return false; }
+      return true;
+    });
+    if (!this._started && this._tilt) {
+      const r = this._tilt.getBoundingClientRect();
+      if (r.top < vh * 0.7 && r.bottom > 0) { this._started = true; this.runScanCycle(); }
+    }
+  }
+  componentWillUnmount() {
+    (this._raf || []).forEach((id) => cancelAnimationFrame(id));
+    if (this._scanTimer) clearTimeout(this._scanTimer);
+    if (this._tick) { window.removeEventListener('scroll', this._tick); window.removeEventListener('resize', this._tick); }
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+  }
+
+  q(sel) { return this._root ? Array.from(this._root.querySelectorAll(sel)) : []; }
+
+  setupReveal() {
+    const els = this.q('[data-reveal]');
+    els.forEach((el) => {
+      const d = parseInt(el.getAttribute('data-reveal-delay') || '0', 10);
+      el.style.transition = 'opacity .7s cubic-bezier(.22,.61,.36,1) ' + d + 'ms, transform .7s cubic-bezier(.22,.61,.36,1) ' + d + 'ms';
+      if (this.reduced) { el.style.opacity = '1'; el.style.transform = 'none'; return; }
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(28px)';
+    });
+    if (this.reduced) return;
+    this._revealEls = els.slice();
+  }
+
+  setupNav() {
+    const nav = this._nav;
+    this._onScroll = () => {
+      if (window.scrollY > 24) {
+        nav.style.background = 'rgba(22,22,25,.78)';
+        nav.style.backdropFilter = 'blur(14px)';
+        nav.style.webkitBackdropFilter = 'blur(14px)';
+        nav.style.borderBottomColor = 'rgba(255,255,255,.08)';
+        nav.style.padding = '13px 32px';
+      } else {
+        nav.style.background = 'transparent';
+        nav.style.backdropFilter = 'none';
+        nav.style.borderBottomColor = 'transparent';
+        nav.style.padding = '18px 32px';
+      }
+    };
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+    this._onScroll();
+  }
+
+  setupCounters() {
+    this._counterEls = this.q('.counter');
+  }
+  runCounter(el) {
+    const to = parseFloat(el.getAttribute('data-to'));
+    const pre = el.getAttribute('data-prefix') || '';
+    const suf = el.getAttribute('data-suffix') || '';
+    if (this.reduced) { el.textContent = pre + to + suf; return; }
+    const dur = 1400, start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = pre + Math.round(to * e) + suf;
+      if (p < 1) this._raf.push(requestAnimationFrame(tick));
+    };
+    this._raf.push(requestAnimationFrame(tick));
+  }
+
+  setupCardHovers() {
+    if (this.reduced) return;
+    this.q('.feat, .stackcard').forEach((el) => {
+      el.addEventListener('mouseenter', () => {
+        el.style.transform = 'translateY(-6px)';
+        el.style.borderColor = 'rgba(131,200,24,.45)';
+        el.style.boxShadow = '0 26px 60px -30px rgba(131,200,24,.45)';
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = '';
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      });
+    });
+  }
+
+  setupMagnetic() {
+    if (this.reduced) return;
+    this.q('[data-magnetic]').forEach((el) => {
+      el.addEventListener('mousemove', (ev) => {
+        const r = el.getBoundingClientRect();
+        const x = ev.clientX - r.left - r.width / 2;
+        const y = ev.clientY - r.top - r.height / 2;
+        el.style.transform = 'translate(' + x * 0.25 + 'px,' + y * 0.35 + 'px)';
+        el.style.boxShadow = '0 10px 40px rgba(131,200,24,.45)';
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = 'translate(0,0)';
+        el.style.boxShadow = '';
+      });
+    });
+  }
+
+  setupTilt() {
+    if (this.reduced || !this._tilt) return;
+    const wrap = this._tilt, inner = this._tiltInner;
+    wrap.addEventListener('mousemove', (ev) => {
+      const r = wrap.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width - 0.5;
+      const py = (ev.clientY - r.top) / r.height - 0.5;
+      inner.style.transform = 'rotateY(' + px * 7 + 'deg) rotateX(' + (-py * 7) + 'deg)';
+    });
+    wrap.addEventListener('mouseleave', () => {
+      inner.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    });
+  }
+
+  setupCanvas() {
+    const cv = this._canvas;
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    let w, h, dpr, pts;
+    const dprCap = 2;
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+      w = window.innerWidth; h = window.innerHeight;
+      cv.width = w * dpr; cv.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.min(70, Math.floor((w * h) / 26000));
+      pts = [];
+      for (let i = 0; i < count; i++) {
+        pts.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.22, vy: (Math.random() - 0.5) * 0.22, r: Math.random() * 1.6 + 0.6 });
+      }
+    };
+    resize();
+    this._onResize = resize;
+    window.addEventListener('resize', resize, { passive: true });
+    if (this.reduced) {
+      ctx.fillStyle = 'rgba(131,200,24,.35)';
+      pts.forEach((p) => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); });
+      return;
+    }
+    let scanY = -120, t = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      t += 0.01;
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > w) p.vx *= -1;
+        if (p.y < 0 || p.y > h) p.vy *= -1;
+        for (let j = i + 1; j < pts.length; j++) {
+          const q = pts[j];
+          const dx = p.x - q.x, dy = p.y - q.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 17000) {
+            const a = (1 - d2 / 17000) * 0.16;
+            ctx.strokeStyle = 'rgba(131,200,24,' + a + ')';
+            ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+          }
+        }
+      }
+      for (const p of pts) {
+        const near = Math.abs(p.y - scanY) < 90;
+        ctx.beginPath();
+        ctx.fillStyle = near ? 'rgba(166,240,46,.9)' : 'rgba(131,200,24,.4)';
+        ctx.arc(p.x, p.y, near ? p.r + 0.8 : p.r, 0, 7);
+        ctx.fill();
+      }
+      scanY += 1.5;
+      if (scanY > h + 120) scanY = -120;
+      const grad = ctx.createLinearGradient(0, scanY - 70, 0, scanY + 4);
+      grad.addColorStop(0, 'rgba(131,200,24,0)');
+      grad.addColorStop(1, 'rgba(131,200,24,.05)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, scanY - 70, w, 74);
+      this._raf.push(requestAnimationFrame(draw));
+    };
+    this._raf.push(requestAnimationFrame(draw));
+  }
+
+  setFinal(state) {
+    // resolved end-state used for reduced motion + end of loop
+    this._secBar.style.width = '100%'; this._corBar.style.width = '100%'; this._readBar.style.width = '100%';
+    this._secCount.textContent = '1'; this._corCount.textContent = '1'; this._readCount.textContent = '2';
+    [this._line6, this._line7, this._line9].forEach((el, i) => {
+      const colors = ['rgba(255,93,108,.12)', 'rgba(131,200,24,.12)', 'rgba(84,184,255,.10)'];
+      const bord = ['var(--sec)', 'var(--cor)', 'var(--read)'];
+      el.style.background = colors[i];
+      el.style.boxShadow = 'inset 3px 0 0 ' + bord[i];
+    });
+    this.showFindings();
+    this.setBlocked();
+  }
+
+  findingsHTML() {
+    const rows = [
+      { c: 'var(--sec)', tag: 'SECURITY', sev: 'CRITICAL', sevc: 'var(--sec)', conf: '0.97', votes: '3 of 3', ln: 'L5', t: 'SQL injection via string concatenation', d: 'User input flows into a raw query. Use a parameterized statement.' },
+      { c: 'var(--cor)', tag: 'CORRECTNESS', sev: 'HIGH', sevc: '#f0b454', conf: '0.91', votes: '2 of 3', ln: 'L6', t: 'Missing await on async db.query()', d: 'rows resolves to a Promise; downstream null-check never sees data.' },
+      { c: 'var(--read)', tag: 'READABILITY', sev: 'LOW', sevc: 'var(--read)', conf: '0.58', votes: '2 of 3', ln: 'L8', t: 'Loose equality and bare 404', d: 'Use === and a structured error response for clarity.' }
+    ];
+    return rows.map((r, i) => (
+      '<div style="display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s" data-find="' + i + '">' +
+        '<span style="width:3px;border-radius:2px;background:' + r.c + ';flex:none"></span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">' +
+            '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;color:' + r.sevc + '">' + r.sev + '</span>' +
+            '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3)">' + r.ln + '</span>' +
+            '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:' + r.c + '">' + r.tag + '</span>' +
+            '<span style="margin-left:auto;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3)">' + r.votes + ' agents</span>' +
+          '</div>' +
+          '<div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">' + r.t + '</div>' +
+          '<div style="font-size:12px;color:var(--tx2);line-height:1.45">' + r.d + '</div>' +
+          '<div style="margin-top:7px;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:' + (parseFloat(r.conf) * 100) + '%;background:' + r.c + ';border-radius:2px"></div></div>' +
+          '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3);margin-top:4px">confidence ' + r.conf + '</div>' +
+        '</div>' +
+      '</div>'
+    )).join('');
+  }
+
+  showFindings() {
+    const f = this._findings;
+    if (!f.dataset.built) { f.innerHTML = this.findingsHTML(); f.dataset.built = '1'; }
+  }
+  revealFinding(i) {
+    const el = this._findings.querySelector('[data-find="' + i + '"]');
+    if (el) { el.style.opacity = '1'; el.style.transform = 'none'; }
+  }
+
+  setStatusState(txt, color) {
+    this._statusTxt.textContent = txt;
+    this._statusDot.style.background = color;
+    this._statusTxt.style.color = color;
+    this._statusDot.style.boxShadow = '0 0 8px ' + color;
+  }
+
+  setBlocked() {
+    this._verdictSpin.style.display = 'none';
+    this._verdictIcon.style.background = 'rgba(255,93,108,.14)';
+    this._verdictIcon.style.borderColor = 'rgba(255,93,108,.4)';
+    this._verdictIcon.innerHTML = '<span style="color:#ff8a95;font-size:18px;font-weight:800">&#33;</span>';
+    this._verdictTitle.textContent = 'Blocked \u00b7 1 critical, 1 high';
+    this._verdictTitle.style.color = '#ff8a95';
+    this._verdictSub.textContent = 'fix L5 before this can merge';
+    this._verdict.style.background = 'rgba(255,93,108,.06)';
+    this._verdictTag.textContent = 'BLOCKED';
+    this._verdictTag.style.background = 'rgba(255,93,108,.14)';
+    this._verdictTag.style.color = '#ff8a95';
+    this._verdictTag.style.borderColor = 'rgba(255,93,108,.4)';
+    this.setStatusState('BLOCKED', '#ff5d6c');
+  }
+
+  resetScan() {
+    this._beam.style.transition = 'none';
+    this._beam.style.opacity = '0';
+    this._beam.style.top = '0px';
+    [this._secBar, this._corBar, this._readBar].forEach((b) => { b.style.width = '0%'; });
+    this._secCount.textContent = '0'; this._corCount.textContent = '0'; this._readCount.textContent = '0';
+    [this._line6, this._line7, this._line9].forEach((el) => { el.style.background = 'transparent'; el.style.boxShadow = 'none'; });
+    if (this._findings.dataset.built) {
+      this._findings.querySelectorAll('[data-find]').forEach((el) => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; });
+    }
+    this._verdictSpin.style.display = 'block';
+    this._verdictIcon.style.background = 'rgba(255,255,255,.05)';
+    this._verdictIcon.style.borderColor = 'var(--line2)';
+    this._verdictIcon.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--tx3);border-top-color:var(--lime);display:block;animation:bt-spin .8s linear infinite"></span>';
+    this._verdictTitle.textContent = 'Coordinator reconciling 3 agents\u2026';
+    this._verdictTitle.style.color = 'var(--tx2)';
+    this._verdictSub.textContent = 'deduping overlaps \u00b7 resolving severity';
+    this._verdict.style.background = '#1c1c1f';
+    this._verdictTag.textContent = 'SCANNING';
+    this._verdictTag.style.background = 'rgba(255,255,255,.05)';
+    this._verdictTag.style.color = 'var(--tx3)';
+    this._verdictTag.style.borderColor = 'var(--line2)';
+    this.setStatusState('SCANNING', '#83C818');
+  }
+
+  setupScan() {
+    if (this.reduced) { this.setStatusState('BLOCKED', '#ff5d6c'); this.setFinal(); return; }
+    // started via onScrollTick when the card scrolls into view
+  }
+
+  runScanCycle() {
+    this.resetScan();
+    const beam = this._beam;
+    const codeH = beam.parentElement.offsetHeight;
+    // begin sweep
+    setTimeout(() => {
+      beam.style.opacity = '1';
+      beam.style.transition = 'top 3s cubic-bezier(.45,.05,.3,1)';
+      beam.style.top = (codeH - 30) + 'px';
+    }, 350);
+
+    // progress bars fill over the sweep
+    const fill = (bar, to, delay) => setTimeout(() => { bar.style.width = to + '%'; }, delay);
+    fill(this._secBar, 40, 700); fill(this._secBar, 100, 2600);
+    fill(this._corBar, 30, 900); fill(this._corBar, 100, 2800);
+    fill(this._readBar, 25, 1100); fill(this._readBar, 100, 3000);
+
+    // line hits as beam passes
+    this._scanT = [];
+    const hit = (el, color, glow, delay) => this._scanT.push(setTimeout(() => {
+      el.style.background = glow; el.style.boxShadow = 'inset 3px 0 0 ' + color;
+    }, delay));
+    hit(this._line6, 'var(--sec)', 'rgba(255,93,108,.12)', 1450);
+    hit(this._line7, 'var(--cor)', 'rgba(131,200,24,.12)', 1900);
+    hit(this._line9, 'var(--read)', 'rgba(84,184,255,.10)', 2600);
+
+    // counts tick
+    this._scanT.push(setTimeout(() => { this._secCount.textContent = '1'; }, 1500));
+    this._scanT.push(setTimeout(() => { this._corCount.textContent = '1'; }, 1950));
+    this._scanT.push(setTimeout(() => { this._readCount.textContent = '2'; }, 2650));
+
+    // beam off, reveal findings + reconcile
+    this._scanT.push(setTimeout(() => { beam.style.opacity = '0'; }, 3400));
+    this._scanT.push(setTimeout(() => { this.showFindings(); }, 3500));
+    this._scanT.push(setTimeout(() => { this.revealFinding(0); }, 3650));
+    this._scanT.push(setTimeout(() => { this.revealFinding(1); }, 3850));
+    this._scanT.push(setTimeout(() => { this.revealFinding(2); }, 4050));
+    this._scanT.push(setTimeout(() => { this.setBlocked(); }, 4500));
+
+    // hold, then loop
+    this._scanTimer = setTimeout(() => { this.runScanCycle(); }, 9500);
+  }
+}
+</script>
+</body>
+</html>
