@@ -34,13 +34,14 @@ Google techs claimed: **Gemini + ADK + Vertex AI + Firebase** (four), plus the G
 9. **Confidence scores per finding** — each agent self-reports confidence; the coordinator weights synthesis by it.
 10. **Graceful degradation** — if one agent times out, the coordinator still produces a verdict from the rest and notes the gap.
 11. **Three tuned specialists** — security, correctness, and readability each run a Gemini model fine-tuned on task-specific data via Vertex AI (see Section 5).
+12. **Eval-backed tuning** — ADK's evaluation harness scores base vs tuned models on the planted-bug repo, so each tuned model is kept only if it measurably wins, and we get a hard number for the writeup.
 
 ### Fixer + demo boosters (applicability score)
-12. **Patch agent** — generates fixed code / a diff for the findings.
-13. **Auto-fix PR** — Octokit opens a PR with the fix.
-14. **Inline PR review comments** — findings posted on the exact lines via Octokit.
-15. **Commit status check** — pass/fail status set on the PR, so BugTrap acts as a real CI merge gate.
-16. **Known-good demo repo** — a small repo with planted, diverse bugs so every agent fires reliably on stage.
+13. **Patch agent** — generates fixed code / a diff for the findings.
+14. **Auto-fix PR** — Octokit opens a PR with the fix.
+15. **Inline PR review comments** — findings posted on the exact lines via Octokit.
+16. **Commit status check** — pass/fail status set on the PR, so BugTrap acts as a real CI merge gate.
+17. **Known-good demo repo** — a small repo with planted, diverse bugs so every agent fires reliably on stage.
 
 ---
 
@@ -49,11 +50,23 @@ Google techs claimed: **Gemini + ADK + Vertex AI + Firebase** (four), plus the G
 ### Stack
 - **Front end:** Next.js (App Router) + TypeScript + Tailwind. Landing page (done) + app page (input + live results). Talks to the backend over SSE.
 - **Backend:** Node/TypeScript service on **Cloud Run** (or Firebase App Hosting backend, which is Cloud Run underneath). One streaming endpoint.
-- **Orchestration:** **ADK (TypeScript)** — `ParallelAgent`, `SequentialAgent`, `LoopAgent`, `LlmAgent`.
+- **Orchestration:** **ADK (TypeScript)** — `ParallelAgent`, `SequentialAgent`, `LlmAgent`.
 - **Model:** **Gemini** via the Gen AI SDK with `GOOGLE_GENAI_USE_VERTEXAI=true` so calls are served on **Vertex AI**. Structured output for typed findings.
-- **Training:** **Vertex AI supervised fine-tuning** for the security specialist.
+- **Training:** **Vertex AI supervised fine-tuning** for all three reviewer agents.
 - **Data / auth:** **Firebase** — Firestore (reviews, findings, verdicts), Firebase Auth (login).
 - **Repo connection:** **GitHub API** via Octokit (PR diff in; comments + status + fix PR out).
+
+### What we use from ADK (and what we skip)
+Use, because each directly helps:
+- **Workflow agents (Parallel + Sequential)** — the orchestration itself: fan out the three reviewers, then run coordinator and patch in sequence.
+- **Shared session state (`output_key`)** — agents hand findings to each other and to the coordinator with no glue code; this is how inter-agent context passing works.
+- **Callbacks (before/after agent)** — fire the per-agent live progress events to the SSE stream, and catch an agent error to trigger graceful degradation.
+- **Function tools** — wrap the Octokit calls (fetch diff, post comment, set status, open PR) as typed, traced tools.
+- **Built-in evaluation** — run base vs tuned models against the planted-bug demo repo to decide whether each tuned model is kept, and to produce a hard metric for the writeup.
+
+Skip, no advantage here: long-term memory / Vertex Memory Bank (reviews are stateless), bidirectional audio/video, the planner, artifact management, multi-model switching.
+
+> TS caveat: the eval framework is strongest in Python ADK. If we stay TypeScript, confirm it exists in the port, or run a simple test script over the demo repo and cite that metric instead. Workflow agents, session state, callbacks, and function tools are solid in TS.
 
 ### Data flow
 ```
@@ -62,18 +75,17 @@ front end (paste or PR link)
    -> if PR: Octokit fetches the diff
    -> ADK SequentialAgent:
         1. ParallelAgent[ security, correctness, readability ]   (each writes typed JSON to shared state)
-        2. Coordinator LlmAgent  (reconcile -> draft verdict)
-        3. LoopAgent critic       (review + revise verdict once)   [optional]
-        4. Patch agent            (generate fixes)                 [optional]
+        2. Coordinator LlmAgent  (reconcile -> verdict)
+        3. Patch agent            (generate fixes)
    -> verdict + findings saved to Firestore
-   -> streamed to the front end via SSE (one event per agent step)
+   -> streamed to the front end via SSE (per-agent progress via ADK callbacks)
    -> if PR: Octokit posts inline comments, sets pass/fail status, opens fix PR
 ```
 
 ### Why each tech (for the written summary)
-- **ADK** — native multi-agent orchestration in TypeScript; parallel fan-out and sequential synthesis are first-class, and typed inter-agent contracts come free with TS.
+- **ADK** — native multi-agent orchestration in TypeScript; parallel fan-out, sequential synthesis, shared-state handoff, lifecycle callbacks for live progress, and a built-in evaluation harness, all first-class.
 - **Gemini** — the reasoning engine inside every agent.
-- **Vertex AI** — serves Gemini (one flag), hosts the tuned security model, and is the production deployment path.
+- **Vertex AI** — serves Gemini (one flag), trains and hosts the three tuned reviewer models, and is the production deployment path.
 - **Firebase** — zero-ops data, auth, and hosting for a fast, reliable demo.
 - **GitHub API** — turns the system into a real pre-merge CI gate, not a toy.
 
@@ -155,13 +167,13 @@ Each line is one example: the code as the user turn, the desired findings JSON a
 ## 6. Build order
 
 **Phase 1 — Core (must ship)**
-Scaffold app page -> Cloud Run endpoint -> ADK Parallel[3] + Coordinator on base Gemini (Vertex-served) -> structured findings -> Firestore -> SSE live progress -> verdict gate. Paste-input mode only.
+Scaffold app page -> Cloud Run endpoint -> ADK Parallel[3] + Coordinator on base Gemini (Vertex-served), per-agent progress via callbacks -> structured findings -> Firestore -> SSE live progress -> verdict gate. Paste-input mode only.
 
 **Phase 2 — Win features (committed)**
 PR input via Octokit -> disagreement surfacing + confidence in the UI -> inter-agent context passing -> patch agent + auto-fix PR -> inline PR comments + commit status check -> graceful degradation -> demo repo with planted bugs.
 
 **Phase 3 — Tuning + stretch (parallel track)**
-Assemble the three datasets -> run the three Vertex SFT jobs -> swap each tuned model in as it lands and beats base -> optional Vertex Agent Engine deploy story.
+Assemble the three datasets -> run the three Vertex SFT jobs -> use ADK eval on the demo repo to compare base vs tuned -> swap each tuned model in as it lands and beats base -> optional: sandbox-verified fixes (run the patch against a test before opening the PR), Vertex Agent Engine deploy story.
 
 The patch agent is committed (Phase 2), not optional. If time runs short, cut from Phase 3 first (tuning degrades gracefully to base Gemini per agent), then trim Phase 2 demo boosters. Phase 1 is non-negotiable; it is the demo.
 
