@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// BugTrap Firestore security rules.
+//
+// All writes happen server-side through the Firebase Admin SDK, which bypasses
+// these rules entirely — so everything below governs CLIENT reads only.
+//
+// Deploy with:  npx -y firebase-tools@latest deploy --only firestore:rules
+// (NOT auto-deployed by this repo.)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Repo-scan reviews: a signed-in user may read only the reviews they own.
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null
+                  && resource.data.uid == request.auth.uid;
+      allow write: if false;
+
+      // Nested files/findings inherit ownership from the parent review.
+      match /{document=**} {
+        allow read: if request.auth != null
+                    && get(/databases/$(database)/documents/reviews/$(reviewId)).data.uid == request.auth.uid;
+        allow write: if false;
+      }
+    }
+
+    // User documents hold the server-only GitHub token — never client-readable.
+    match /users/{uid} {
+      allow read, write: if false;
+    }
+  }
+}

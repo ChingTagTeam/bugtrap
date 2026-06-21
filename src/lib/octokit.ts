@@ -10,3 +10,12 @@ export function getOctokit(): Octokit {
   }
   return _octokit;
 }
+
+/**
+ * Per-user Octokit, authenticated with a user's stored GitHub OAuth token.
+ * Used by the repo-scan feature (the global getOctokit() above still backs
+ * the existing PR review flow).
+ */
+export function octokitForToken(token: string): Octokit {
+  return new Octokit({ auth: token });
+}

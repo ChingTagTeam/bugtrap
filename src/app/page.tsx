@@ -2,6 +2,8 @@ import Image from "next/image";
 import CanvasBackground from "@/components/CanvasBackground";
 import ScannerCard from "@/components/ScannerCard";
 import PageInteractions from "@/components/PageInteractions";
+import LandingNav from "@/components/landing/LandingNav";
+import HeroCTA from "@/components/landing/HeroCTA";
 
 const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace";
 
@@ -9,6 +11,7 @@ export default function Home() {
   return (
     <div className="bt-root">
       <CanvasBackground />
+      <LandingNav />
       <div
         style={{
           position: "fixed",
@@ -36,34 +39,6 @@ export default function Home() {
         }}
       >
         <div>
-          <div
-            data-reveal
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 30,
-            }}
-          >
-            <Image
-              src="/BugTrap-logo.png"
-              alt="BugTrap"
-              width={42}
-              height={42}
-              priority
-              style={{
-                width: 42,
-                height: 42,
-                objectFit: "contain",
-                filter: "drop-shadow(0 0 14px rgba(131,200,24,.45))",
-              }}
-            />
-            <span
-              style={{ fontWeight: 800, fontSize: 22, letterSpacing: "-.02em" }}
-            >
-              BugTrap
-            </span>
-          </div>
           <h1
             data-reveal
             data-reveal-delay="60"
@@ -120,26 +95,7 @@ export default function Home() {
               flexWrap: "wrap",
             }}
           >
-            <a
-              href="#"
-              data-magnetic
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 9,
-                background: "var(--lime)",
-                color: "#15150f",
-                textDecoration: "none",
-                fontSize: 16,
-                fontWeight: 700,
-                padding: "15px 26px",
-                borderRadius: 11,
-                boxShadow: "0 6px 26px rgba(131,200,24,.3)",
-                transition: "box-shadow .25s,transform .1s",
-              }}
-            >
-              Scan my code <span>→</span>
-            </a>
+            <HeroCTA />
             <a
               href="#"
               className="bt-ghost-btn"

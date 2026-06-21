@@ -1,5 +1,29 @@
+import { Octokit } from '@octokit/rest';
 import { getOctokit } from './octokit';
 import type { PRContext, RankedFinding, Verdict } from './types';
+
+/** Thrown by getPublicRepoInfo when a repo is private (or not visible). */
+export class PrivateRepoError extends Error {
+  constructor() {
+    super('PRIVATE_REPO');
+    this.name = 'PrivateRepoError';
+  }
+}
+
+/**
+ * Confirms a repo is public (guards the shared server token from being used to
+ * read private repos in the unauthenticated public path) and returns its
+ * default branch.
+ */
+export async function getPublicRepoInfo(
+  octokit: Octokit,
+  owner: string,
+  repo: string
+): Promise<{ defaultBranch: string }> {
+  const { data } = await octokit.repos.get({ owner, repo });
+  if (data.private) throw new PrivateRepoError();
+  return { defaultBranch: data.default_branch };
+}
 
 export function parsePRUrl(url: string): { owner: string; repo: string; pullNumber: number } {
   const match = url.match(/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/);

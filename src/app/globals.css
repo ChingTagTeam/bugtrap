@@ -6,6 +6,28 @@
   --font-mono: var(--font-jetbrains-mono);
 }
 
+/* Brand tokens promoted to :root so the scan/review feature pages and their
+   components can reference var(--token) without being wrapped in .bt-root.
+   These values mirror the .bt-root block below exactly (additive, no change
+   to the landing page, which still scopes the same values to .bt-root). */
+:root {
+  --lime: #83c818;
+  --lime-bright: #a6f02e;
+  --bg: #1d1d20;
+  --bg2: #252529;
+  --surf: #28282d;
+  --surf2: #303036;
+  --line: rgba(255, 255, 255, 0.08);
+  --line2: rgba(255, 255, 255, 0.14);
+  --tx: #f2f2ef;
+  --tx2: #a3a3a8;
+  --tx3: #6f6f76;
+  --sec: #ff5d6c;
+  --cor: #83c818;
+  --read: #54b8ff;
+  --high: #f0b454;
+}
+
 /* ── Base (ported from design/BugTrap-Landing.html) ───────────────── */
 * {
   box-sizing: border-box;
@@ -90,6 +112,47 @@ body {
 @keyframes bt-orbit {
   to { transform: rotate(360deg); }
 }
+/* ── Feature-page motions (scan / review graph / IDE panel) ───────── */
+@keyframes bt-panel-in {
+  0% { opacity: 0; transform: translateX(36px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes bt-fade-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes bt-scan-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes bt-count-tick {
+  0% { opacity: 0.45; }
+  50% { opacity: 1; }
+  100% { opacity: 0.45; }
+}
+.bt-spin { animation: bt-spin 0.9s linear infinite; }
+
+/* ── Accessible keyboard focus (keyboard-only, never on mouse click) ─ */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── On-brand dark scrollbars for the feature pages ───────────────── */
+.bt-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(131, 200, 24, 0.35) transparent;
+}
+.bt-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.bt-scroll::-webkit-scrollbar-track { background: transparent; }
+.bt-scroll::-webkit-scrollbar-thumb {
+  background: rgba(131, 200, 24, 0.22);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.bt-scroll::-webkit-scrollbar-thumb:hover { background: rgba(131, 200, 24, 0.4); background-clip: content-box; }
 
 /* ── Root token block (verbatim CSS variables from the source's root
    element, applied via class to keep them on the page root) ───────── */
@@ -158,6 +221,27 @@ body {
     font-size: 32px !important;
   }
 }
+
+/* ── Landing nav responsive visibility ────────────────────────────── */
+.bt-nav-links { display: flex; }
+@media (max-width: 820px) { .bt-nav-links { display: none; } }
+@media (max-width: 520px) { .bt-nav-name { display: none; } }
+
+/* Repo card hover affordance arrow */
+.bt-repo-card:hover .bt-repo-arrow { opacity: 1 !important; }
+
+/* Animated ellipsis in the live scan readout */
+.bt-dots { animation: bt-count-tick 1.3s ease-in-out infinite; }
+
+/* ── Monaco finding decorations (global — Monaco renders its own DOM) ── */
+.bt-dec-CRITICAL { background: rgba(255, 93, 108, 0.14); }
+.bt-dec-HIGH { background: rgba(240, 180, 84, 0.13); }
+.bt-dec-MEDIUM { background: rgba(244, 196, 48, 0.11); }
+.bt-dec-LOW { background: rgba(84, 184, 255, 0.11); }
+.bt-dec-INFO { background: rgba(111, 111, 118, 0.12); }
+.bt-glyph-security { background: radial-gradient(circle at 50% 50%, #ff5d6c 0 3px, transparent 4px); }
+.bt-glyph-correctness { background: radial-gradient(circle at 50% 50%, #83c818 0 3px, transparent 4px); }
+.bt-glyph-readability { background: radial-gradient(circle at 50% 50%, #54b8ff 0 3px, transparent 4px); }
 
 /* ── Scroll-reveal initial state ──────────────────────────────────────
    Applied only when JS is active (html.js), so no-JS users see content.

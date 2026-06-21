@@ -11,7 +11,7 @@ export function getAI(): GoogleGenAI {
   return _ai;
 }
 
-export const MODEL = 'gemini-3.5-flash';
+export const MODEL = 'gemini-2.5-flash';
 
 /**
  * Returns the tuned model endpoint for a given agent if one is configured
