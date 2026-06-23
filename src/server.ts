@@ -73,6 +73,17 @@ export function createServer() {
 // Boot only when run directly (not when imported by a check).
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
+  // Safety net: scanning runs fire-and-forget after the 200 ack, and some
+  // dependencies (e.g. google-auth) can reject a side promise that escapes the
+  // awaited processPush() chain. A webhook scan failure must never crash the
+  // server, so log and keep serving instead of letting the process exit.
+  process.on('unhandledRejection', (reason) => {
+    console.error('[scan] unhandled rejection:', reason instanceof Error ? reason.message : reason);
+  });
+  process.on('uncaughtException', (err) => {
+    console.error('[scan] uncaught exception:', err instanceof Error ? err.message : err);
+  });
+
   const port = Number(process.env.PORT ?? 3001);
   createServer().listen(port, () => console.log(`webhook server listening on :${port}`));
 }
