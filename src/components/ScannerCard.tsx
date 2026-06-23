@@ -5,7 +5,16 @@ import type { CSSProperties } from "react";
 
 const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace";
 
-type Finding = {
+/**
+ * The hero's interactive scanner card. A faithful React port of the
+ * Sidecode-Landing export's two-agent scan state machine
+ * (READY → scanning → agent meters → findings rail → verdict gate),
+ * plus the card's 3D tilt. The cycle starts when the card scrolls into view
+ * and loops; honors prefers-reduced-motion (settles instantly to BLOCKED).
+ * All timers / rAF / listeners are cleaned up on unmount.
+ */
+
+type FindingRow = {
   c: string;
   tag: string;
   sev: string;
@@ -17,122 +26,136 @@ type Finding = {
   d: string;
 };
 
-const FINDINGS: Finding[] = [
+// Two agents (Security + Bug), matching the export verbatim.
+const FINDINGS: FindingRow[] = [
   {
     c: "var(--sec)",
     tag: "SECURITY",
     sev: "CRITICAL",
     sevc: "var(--sec)",
     conf: "0.97",
-    votes: "3 of 3",
+    votes: "2 of 2",
     ln: "L5",
     t: "SQL injection via string concatenation",
     d: "User input flows into a raw query. Use a parameterized statement.",
   },
   {
-    c: "var(--cor)",
-    tag: "CORRECTNESS",
+    c: "var(--bug)",
+    tag: "BUG",
     sev: "HIGH",
-    sevc: "#f0b454",
+    sevc: "var(--bug)",
     conf: "0.91",
-    votes: "2 of 3",
+    votes: "1 of 2",
     ln: "L6",
     t: "Missing await on async db.query()",
-    d: "rows resolves to a Promise; downstream null-check never sees data.",
-  },
-  {
-    c: "var(--read)",
-    tag: "READABILITY",
-    sev: "LOW",
-    sevc: "var(--read)",
-    conf: "0.58",
-    votes: "2 of 3",
-    ln: "L8",
-    t: "Loose equality and bare 404",
-    d: "Use === and a structured error response for clarity.",
+    d: "rows resolves to a Promise; the downstream null-check never sees data.",
   },
 ];
 
-const lnStyle: CSSProperties = {
-  padding: "0 16px",
-  color: "#cfcfd4",
-};
+function findingsHTML(): string {
+  return FINDINGS.map(
+    (rr, i) =>
+      '<div style="display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s" data-find="' +
+      i +
+      '">' +
+      '<span style="width:3px;border-radius:2px;background:' +
+      rr.c +
+      ';flex:none"></span>' +
+      '<div style="flex:1;min-width:0">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">' +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;color:' +
+      rr.sevc +
+      '">' +
+      rr.sev +
+      "</span>" +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3)">' +
+      rr.ln +
+      "</span>" +
+      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:' +
+      rr.c +
+      '">' +
+      rr.tag +
+      "</span>" +
+      '<span style="margin-left:auto;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3)">' +
+      rr.votes +
+      " agents</span>" +
+      "</div>" +
+      '<div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">' +
+      rr.t +
+      "</div>" +
+      '<div style="font-size:12px;color:var(--tx2);line-height:1.45">' +
+      rr.d +
+      "</div>" +
+      '<div style="margin-top:7px;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:' +
+      parseFloat(rr.conf) * 100 +
+      "%;background:" +
+      rr.c +
+      ';border-radius:2px"></div></div>' +
+      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3);margin-top:4px">confidence ' +
+      rr.conf +
+      "</div>" +
+      "</div>" +
+      "</div>",
+  ).join("");
+}
+
+const lnStyle: CSSProperties = { padding: "0 16px", color: "#6E6E6E" };
+const lnStyleLight: CSSProperties = { padding: "0 16px", color: "#D4D4D4" };
 const numStyle: CSSProperties = {
   display: "inline-block",
   width: 26,
   color: "#45454c",
 };
-const kw: CSSProperties = { color: "#c98fff" };
-const str: CSSProperties = { color: "#9fe06a" };
-const fn: CSSProperties = { color: "#7cc7ff" };
-const num: CSSProperties = { color: "#f0b454" };
-const bugLine: CSSProperties = {
-  padding: "0 16px",
-  color: "#cfcfd4",
-  position: "relative",
-  transition: "background .3s",
-};
 
-/**
- * The interactive hero scanner card. Sweeps a scan beam over a code block,
- * fills three agent meters, populates the findings rail, and resolves the
- * verdict gate to BLOCKED — then loops. Ported from the dc-script state
- * machine (runScanCycle/resetScan/setBlocked) into refs + effects.
- */
 export default function ScannerCard() {
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const tiltRef = useRef<HTMLDivElement | null>(null);
   const innerRef = useRef<HTMLDivElement | null>(null);
-
-  const statusDotRef = useRef<HTMLSpanElement | null>(null);
-  const statusTxtRef = useRef<HTMLSpanElement | null>(null);
-
-  const secBarRef = useRef<HTMLDivElement | null>(null);
-  const corBarRef = useRef<HTMLDivElement | null>(null);
-  const readBarRef = useRef<HTMLDivElement | null>(null);
-  const secCountRef = useRef<HTMLSpanElement | null>(null);
-  const corCountRef = useRef<HTMLSpanElement | null>(null);
-  const readCountRef = useRef<HTMLSpanElement | null>(null);
-
-  const beamRef = useRef<HTMLDivElement | null>(null);
-  const line6Ref = useRef<HTMLDivElement | null>(null);
-  const line7Ref = useRef<HTMLDivElement | null>(null);
-  const line9Ref = useRef<HTMLDivElement | null>(null);
-
-  const findingRefs = useRef<Array<HTMLDivElement | null>>([]);
-
-  const verdictRef = useRef<HTMLDivElement | null>(null);
-  const verdictIconRef = useRef<HTMLDivElement | null>(null);
-  const verdictSpinRef = useRef<HTMLSpanElement | null>(null);
-  const verdictBangRef = useRef<HTMLSpanElement | null>(null);
-  const verdictTitleRef = useRef<HTMLDivElement | null>(null);
-  const verdictSubRef = useRef<HTMLDivElement | null>(null);
-  const verdictTagRef = useRef<HTMLDivElement | null>(null);
+  const statusDot = useRef<HTMLSpanElement | null>(null);
+  const statusTxt = useRef<HTMLSpanElement | null>(null);
+  const secBar = useRef<HTMLDivElement | null>(null);
+  const bugBar = useRef<HTMLDivElement | null>(null);
+  const secCount = useRef<HTMLSpanElement | null>(null);
+  const bugCount = useRef<HTMLSpanElement | null>(null);
+  const beam = useRef<HTMLDivElement | null>(null);
+  const line5 = useRef<HTMLDivElement | null>(null);
+  const line6 = useRef<HTMLDivElement | null>(null);
+  const findings = useRef<HTMLDivElement | null>(null);
+  const verdict = useRef<HTMLDivElement | null>(null);
+  const verdictIcon = useRef<HTMLDivElement | null>(null);
+  const verdictSpin = useRef<HTMLSpanElement | null>(null);
+  const verdictTitle = useRef<HTMLDivElement | null>(null);
+  const verdictSub = useRef<HTMLDivElement | null>(null);
+  const verdictTag = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    const timers: number[] = [];
+    let loopTimer = 0;
 
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    let loopTimer: ReturnType<typeof setTimeout> | undefined;
-    let started = false;
-
-    const lineEls = () => [line6Ref.current, line7Ref.current, line9Ref.current];
-    const barEls = () => [secBarRef.current, corBarRef.current, readBarRef.current];
-
-    const setStatusState = (txt: string, color: string) => {
-      if (statusTxtRef.current) {
-        statusTxtRef.current.textContent = txt;
-        statusTxtRef.current.style.color = color;
+    const setStatus = (txt: string, color: string) => {
+      if (statusTxt.current) {
+        statusTxt.current.textContent = txt;
+        statusTxt.current.style.color = color;
       }
-      if (statusDotRef.current) {
-        statusDotRef.current.style.background = color;
-        statusDotRef.current.style.boxShadow = "0 0 8px " + color;
+      if (statusDot.current) {
+        statusDot.current.style.background = color;
+        statusDot.current.style.boxShadow = "0 0 8px " + color;
       }
     };
 
+    const showFindings = () => {
+      const f = findings.current;
+      if (f && !f.dataset.built) {
+        f.innerHTML = findingsHTML();
+        f.dataset.built = "1";
+      }
+    };
     const revealFinding = (i: number) => {
-      const el = findingRefs.current[i];
+      const el = findings.current?.querySelector<HTMLElement>(
+        '[data-find="' + i + '"]',
+      );
       if (el) {
         el.style.opacity = "1";
         el.style.transform = "none";
@@ -140,130 +163,128 @@ export default function ScannerCard() {
     };
 
     const setBlocked = () => {
-      if (verdictSpinRef.current) verdictSpinRef.current.style.display = "none";
-      if (verdictBangRef.current) verdictBangRef.current.style.display = "block";
-      if (verdictIconRef.current) {
-        verdictIconRef.current.style.background = "rgba(255,93,108,.14)";
-        verdictIconRef.current.style.borderColor = "rgba(255,93,108,.4)";
+      if (verdictSpin.current) verdictSpin.current.style.display = "none";
+      if (verdictIcon.current) {
+        verdictIcon.current.style.background = "rgba(242,109,120,.14)";
+        verdictIcon.current.style.borderColor = "rgba(242,109,120,.4)";
+        verdictIcon.current.innerHTML =
+          '<span style="color:#f58b94;font-size:18px;font-weight:800">!</span>';
       }
-      if (verdictTitleRef.current) {
-        verdictTitleRef.current.textContent = "Blocked · 1 critical, 1 high";
-        verdictTitleRef.current.style.color = "#ff8a95";
+      if (verdictTitle.current) {
+        verdictTitle.current.textContent = "Blocked · 1 critical, 1 high";
+        verdictTitle.current.style.color = "#f58b94";
       }
-      if (verdictSubRef.current)
-        verdictSubRef.current.textContent = "fix L5 before this can merge";
-      if (verdictRef.current)
-        verdictRef.current.style.background = "rgba(255,93,108,.06)";
-      if (verdictTagRef.current) {
-        verdictTagRef.current.textContent = "BLOCKED";
-        verdictTagRef.current.style.background = "rgba(255,93,108,.14)";
-        verdictTagRef.current.style.color = "#ff8a95";
-        verdictTagRef.current.style.borderColor = "rgba(255,93,108,.4)";
+      if (verdictSub.current)
+        verdictSub.current.textContent = "fix L5 before this can merge";
+      if (verdict.current)
+        verdict.current.style.background = "rgba(242,109,120,.07)";
+      if (verdictTag.current) {
+        verdictTag.current.textContent = "BLOCKED";
+        verdictTag.current.style.background = "rgba(242,109,120,.14)";
+        verdictTag.current.style.color = "#f58b94";
+        verdictTag.current.style.borderColor = "rgba(242,109,120,.4)";
       }
-      setStatusState("BLOCKED", "#ff5d6c");
+      setStatus("BLOCKED", "#F26D78");
     };
 
     const setFinal = () => {
-      // resolved end-state for reduced motion
-      barEls().forEach((b) => {
-        if (b) b.style.width = "100%";
-      });
-      if (secCountRef.current) secCountRef.current.textContent = "1";
-      if (corCountRef.current) corCountRef.current.textContent = "1";
-      if (readCountRef.current) readCountRef.current.textContent = "2";
-      const colors = [
-        "rgba(255,93,108,.12)",
-        "rgba(131,200,24,.12)",
-        "rgba(84,184,255,.10)",
-      ];
-      const bord = ["var(--sec)", "var(--cor)", "var(--read)"];
-      lineEls().forEach((el, i) => {
-        if (!el) return;
-        el.style.background = colors[i];
-        el.style.boxShadow = "inset 3px 0 0 " + bord[i];
-      });
-      // reveal findings so the resolved content is visible without motion
-      FINDINGS.forEach((_, i) => revealFinding(i));
+      if (secBar.current) secBar.current.style.width = "100%";
+      if (bugBar.current) bugBar.current.style.width = "100%";
+      if (secCount.current) secCount.current.textContent = "1";
+      if (bugCount.current) bugCount.current.textContent = "1";
+      if (line5.current) {
+        line5.current.style.background = "rgba(242,109,120,.12)";
+        line5.current.style.boxShadow = "inset 3px 0 0 var(--sec)";
+      }
+      if (line6.current) {
+        line6.current.style.background = "rgba(232,163,61,.12)";
+        line6.current.style.boxShadow = "inset 3px 0 0 var(--bug)";
+      }
+      showFindings();
+      findings.current
+        ?.querySelectorAll<HTMLElement>("[data-find]")
+        .forEach((el) => {
+          el.style.opacity = "1";
+          el.style.transform = "none";
+        });
       setBlocked();
     };
 
     const resetScan = () => {
-      if (beamRef.current) {
-        beamRef.current.style.transition = "none";
-        beamRef.current.style.opacity = "0";
-        beamRef.current.style.top = "0px";
+      if (beam.current) {
+        beam.current.style.transition = "none";
+        beam.current.style.opacity = "0";
+        beam.current.style.top = "0px";
       }
-      barEls().forEach((b) => {
+      [secBar.current, bugBar.current].forEach((b) => {
         if (b) b.style.width = "0%";
       });
-      if (secCountRef.current) secCountRef.current.textContent = "0";
-      if (corCountRef.current) corCountRef.current.textContent = "0";
-      if (readCountRef.current) readCountRef.current.textContent = "0";
-      lineEls().forEach((el) => {
-        if (!el) return;
-        el.style.background = "transparent";
-        el.style.boxShadow = "none";
-      });
-      findingRefs.current.forEach((el) => {
+      if (secCount.current) secCount.current.textContent = "0";
+      if (bugCount.current) bugCount.current.textContent = "0";
+      [line5.current, line6.current].forEach((el) => {
         if (el) {
-          el.style.opacity = "0";
-          el.style.transform = "translateY(8px)";
+          el.style.background = "transparent";
+          el.style.boxShadow = "none";
         }
       });
-      if (verdictSpinRef.current) verdictSpinRef.current.style.display = "block";
-      if (verdictBangRef.current) verdictBangRef.current.style.display = "none";
-      if (verdictIconRef.current) {
-        verdictIconRef.current.style.background = "rgba(255,255,255,.05)";
-        verdictIconRef.current.style.borderColor = "var(--line2)";
+      if (findings.current?.dataset.built) {
+        findings.current
+          .querySelectorAll<HTMLElement>("[data-find]")
+          .forEach((el) => {
+            el.style.opacity = "0";
+            el.style.transform = "translateY(8px)";
+          });
       }
-      if (verdictTitleRef.current) {
-        verdictTitleRef.current.textContent =
-          "Coordinator reconciling 3 agents…";
-        verdictTitleRef.current.style.color = "var(--tx2)";
+      if (verdictSpin.current) verdictSpin.current.style.display = "block";
+      if (verdictIcon.current) {
+        verdictIcon.current.style.background = "rgba(255,255,255,.05)";
+        verdictIcon.current.style.borderColor = "var(--line)";
+        verdictIcon.current.innerHTML =
+          '<span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--tx3);border-top-color:var(--in);display:block;animation:bt-spin .8s linear infinite"></span>';
       }
-      if (verdictSubRef.current)
-        verdictSubRef.current.textContent =
+      if (verdictTitle.current) {
+        verdictTitle.current.textContent =
+          "Coordinator reconciling 2 agents…";
+        verdictTitle.current.style.color = "var(--tx2)";
+      }
+      if (verdictSub.current)
+        verdictSub.current.textContent =
           "deduping overlaps · resolving severity";
-      if (verdictRef.current) verdictRef.current.style.background = "#1c1c1f";
-      if (verdictTagRef.current) {
-        verdictTagRef.current.textContent = "SCANNING";
-        verdictTagRef.current.style.background = "rgba(255,255,255,.05)";
-        verdictTagRef.current.style.color = "var(--tx3)";
-        verdictTagRef.current.style.borderColor = "var(--line2)";
+      if (verdict.current) verdict.current.style.background = "#2D2D30";
+      if (verdictTag.current) {
+        verdictTag.current.textContent = "SCANNING";
+        verdictTag.current.style.background = "rgba(255,255,255,.05)";
+        verdictTag.current.style.color = "var(--tx3)";
+        verdictTag.current.style.borderColor = "var(--line)";
       }
-      setStatusState("SCANNING", "#83C818");
+      setStatus("SCANNING", "#5C8AF0");
     };
 
     const runScanCycle = () => {
+      if (reduced) return;
       resetScan();
-      const beam = beamRef.current;
-      if (!beam || !beam.parentElement) return;
-      const codeH = beam.parentElement.offsetHeight;
-
+      const b = beam.current;
+      const codeH = b?.parentElement?.offsetHeight ?? 0;
       timers.push(
-        setTimeout(() => {
-          beam.style.opacity = "1";
-          beam.style.transition = "top 3s cubic-bezier(.45,.05,.3,1)";
-          beam.style.top = codeH - 30 + "px";
+        window.setTimeout(() => {
+          if (b) {
+            b.style.opacity = "1";
+            b.style.transition = "top 3s cubic-bezier(.45,.05,.3,1)";
+            b.style.top = codeH - 30 + "px";
+          }
         }, 350),
       );
 
-      const fill = (
-        bar: HTMLDivElement | null,
-        to: number,
-        delay: number,
-      ) =>
+      const fill = (el: HTMLDivElement | null, to: number, delay: number) =>
         timers.push(
-          setTimeout(() => {
-            if (bar) bar.style.width = to + "%";
+          window.setTimeout(() => {
+            if (el) el.style.width = to + "%";
           }, delay),
         );
-      fill(secBarRef.current, 40, 700);
-      fill(secBarRef.current, 100, 2600);
-      fill(corBarRef.current, 30, 900);
-      fill(corBarRef.current, 100, 2800);
-      fill(readBarRef.current, 25, 1100);
-      fill(readBarRef.current, 100, 3000);
+      fill(secBar.current, 45, 700);
+      fill(secBar.current, 100, 2600);
+      fill(bugBar.current, 30, 1000);
+      fill(bugBar.current, 100, 2900);
 
       const hit = (
         el: HTMLDivElement | null,
@@ -272,140 +293,120 @@ export default function ScannerCard() {
         delay: number,
       ) =>
         timers.push(
-          setTimeout(() => {
+          window.setTimeout(() => {
             if (el) {
               el.style.background = glow;
               el.style.boxShadow = "inset 3px 0 0 " + color;
             }
           }, delay),
         );
-      hit(line6Ref.current, "var(--sec)", "rgba(255,93,108,.12)", 1450);
-      hit(line7Ref.current, "var(--cor)", "rgba(131,200,24,.12)", 1900);
-      hit(line9Ref.current, "var(--read)", "rgba(84,184,255,.10)", 2600);
+      hit(line5.current, "var(--sec)", "rgba(242,109,120,.12)", 1450);
+      hit(line6.current, "var(--bug)", "rgba(232,163,61,.12)", 2100);
 
       timers.push(
-        setTimeout(() => {
-          if (secCountRef.current) secCountRef.current.textContent = "1";
+        window.setTimeout(() => {
+          if (secCount.current) secCount.current.textContent = "1";
         }, 1500),
       );
       timers.push(
-        setTimeout(() => {
-          if (corCountRef.current) corCountRef.current.textContent = "1";
-        }, 1950),
+        window.setTimeout(() => {
+          if (bugCount.current) bugCount.current.textContent = "1";
+        }, 2150),
       );
       timers.push(
-        setTimeout(() => {
-          if (readCountRef.current) readCountRef.current.textContent = "2";
-        }, 2650),
-      );
-
-      timers.push(
-        setTimeout(() => {
-          if (beamRef.current) beamRef.current.style.opacity = "0";
+        window.setTimeout(() => {
+          if (beam.current) beam.current.style.opacity = "0";
         }, 3400),
       );
-      timers.push(setTimeout(() => revealFinding(0), 3650));
-      timers.push(setTimeout(() => revealFinding(1), 3850));
-      timers.push(setTimeout(() => revealFinding(2), 4050));
-      timers.push(setTimeout(() => setBlocked(), 4500));
+      timers.push(window.setTimeout(() => showFindings(), 3500));
+      timers.push(window.setTimeout(() => revealFinding(0), 3650));
+      timers.push(window.setTimeout(() => revealFinding(1), 3900));
+      timers.push(window.setTimeout(() => setBlocked(), 4400));
 
-      loopTimer = setTimeout(() => runScanCycle(), 9500);
+      loopTimer = window.setTimeout(() => runScanCycle(), 9500);
     };
 
+    // Reduced motion: resolve straight to the blocked end-state.
     if (reduced) {
-      setStatusState("BLOCKED", "#ff5d6c");
       setFinal();
-      return;
-    }
-
-    const wrap = wrapRef.current;
-    const inner = innerRef.current;
-
-    // mouse-tilt
-    const onMove = (ev: MouseEvent) => {
-      if (!wrap || !inner) return;
-      const r = wrap.getBoundingClientRect();
-      const px = (ev.clientX - r.left) / r.width - 0.5;
-      const py = (ev.clientY - r.top) / r.height - 0.5;
-      inner.style.transform =
-        "rotateY(" + px * 7 + "deg) rotateX(" + -py * 7 + "deg)";
-    };
-    const onLeave = () => {
-      if (inner) inner.style.transform = "rotateY(0deg) rotateX(0deg)";
-    };
-    if (wrap) {
-      wrap.addEventListener("mousemove", onMove);
-      wrap.addEventListener("mouseleave", onLeave);
-    }
-
-    // start the scan loop when the card scrolls into view
-    let scanObs: IntersectionObserver | undefined;
-    if (wrap) {
-      scanObs = new IntersectionObserver(
-        (entries) => {
+    } else {
+      // Start the cycle when the card scrolls into view (once).
+      const wrap = tiltRef.current;
+      let started = false;
+      const startObs = new IntersectionObserver(
+        (entries, obs) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting && !started) {
               started = true;
               runScanCycle();
-              scanObs?.disconnect();
+              obs.disconnect();
             }
           });
         },
         { rootMargin: "0px 0px -30% 0px" },
       );
-      scanObs.observe(wrap);
+      if (wrap) startObs.observe(wrap);
+
+      // Tilt
+      const inner = innerRef.current;
+      const onMove = (ev: MouseEvent) => {
+        if (!wrap || !inner) return;
+        const r = wrap.getBoundingClientRect();
+        const px = (ev.clientX - r.left) / r.width - 0.5;
+        const py = (ev.clientY - r.top) / r.height - 0.5;
+        inner.style.transform =
+          "rotateY(" + px * 7 + "deg) rotateX(" + -py * 7 + "deg)";
+      };
+      const onLeave = () => {
+        if (inner) inner.style.transform = "rotateY(0deg) rotateX(0deg)";
+      };
+      wrap?.addEventListener("mousemove", onMove);
+      wrap?.addEventListener("mouseleave", onLeave);
+
+      return () => {
+        startObs.disconnect();
+        wrap?.removeEventListener("mousemove", onMove);
+        wrap?.removeEventListener("mouseleave", onLeave);
+        timers.forEach((t) => clearTimeout(t));
+        clearTimeout(loopTimer);
+      };
     }
 
     return () => {
       timers.forEach((t) => clearTimeout(t));
-      if (loopTimer) clearTimeout(loopTimer);
-      scanObs?.disconnect();
-      if (wrap) {
-        wrap.removeEventListener("mousemove", onMove);
-        wrap.removeEventListener("mouseleave", onLeave);
-      }
+      clearTimeout(loopTimer);
     };
   }, []);
 
   return (
     <div
-      ref={wrapRef}
+      ref={tiltRef}
       data-reveal
       data-reveal-delay="120"
-      style={{ position: "relative", perspective: "1400px" }}
+      style={{ position: "relative", perspective: 1400 }}
     >
       <div
         ref={innerRef}
         style={{
           position: "relative",
-          borderRadius: 16,
-          background: "linear-gradient(180deg,#202024,#1a1a1d)",
-          border: "1px solid var(--line2)",
-          boxShadow:
-            "0 40px 90px -30px rgba(0,0,0,.7),0 0 0 1px rgba(131,200,24,.04)",
+          borderRadius: 14,
+          background: "var(--surf)",
+          border: "1px solid var(--line)",
+          boxShadow: "0 40px 90px -36px rgba(0,0,0,.8)",
           transformStyle: "preserve-3d",
           transition: "transform .15s ease-out",
           overflow: "hidden",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: 16,
-            pointerEvents: "none",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,.06)",
-          }}
-        />
-
         {/* card header */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "13px 16px",
+            padding: "11px 14px",
             borderBottom: "1px solid var(--line)",
+            background: "#2D2D30",
           }}
         >
           <div
@@ -419,30 +420,17 @@ export default function ScannerCard() {
             }}
           >
             <span style={{ display: "flex", gap: 6 }}>
-              <span
-                style={{
-                  width: 11,
-                  height: 11,
-                  borderRadius: "50%",
-                  background: "#3a3a40",
-                }}
-              />
-              <span
-                style={{
-                  width: 11,
-                  height: 11,
-                  borderRadius: "50%",
-                  background: "#3a3a40",
-                }}
-              />
-              <span
-                style={{
-                  width: 11,
-                  height: 11,
-                  borderRadius: "50%",
-                  background: "#3a3a40",
-                }}
-              />
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  style={{
+                    width: 11,
+                    height: 11,
+                    borderRadius: "50%",
+                    background: "#3C3C3C",
+                  }}
+                />
+              ))}
             </span>
             <span style={{ marginLeft: 6 }}>api/users.ts</span>
           </div>
@@ -459,7 +447,7 @@ export default function ScannerCard() {
             }}
           >
             <span
-              ref={statusDotRef}
+              ref={statusDot}
               style={{
                 width: 7,
                 height: 7,
@@ -467,37 +455,31 @@ export default function ScannerCard() {
                 background: "var(--tx3)",
               }}
             />
-            <span ref={statusTxtRef}>READY</span>
+            <span ref={statusTxt}>READY</span>
           </div>
         </div>
 
-        {/* agent meters */}
+        {/* agent meters (TWO) */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
+            gridTemplateColumns: "1fr 1fr",
             gap: 1,
             background: "var(--line)",
             borderBottom: "1px solid var(--line)",
           }}
         >
           <Meter
-            label="SECURITY"
             color="var(--sec)"
-            countRef={secCountRef}
-            barRef={secBarRef}
+            label="SECURITY"
+            countRef={secCount}
+            barRef={secBar}
           />
           <Meter
-            label="CORRECTNESS"
-            color="var(--cor)"
-            countRef={corCountRef}
-            barRef={corBarRef}
-          />
-          <Meter
-            label="READABILITY"
-            color="var(--read)"
-            countRef={readCountRef}
-            barRef={readBarRef}
+            color="var(--bug)"
+            label="BUG"
+            countRef={bugCount}
+            barRef={bugBar}
           />
         </div>
 
@@ -509,11 +491,11 @@ export default function ScannerCard() {
             fontFamily: mono,
             fontSize: 13,
             lineHeight: 1.85,
-            background: "#161618",
+            background: "#1E1E1E",
           }}
         >
           <div
-            ref={beamRef}
+            ref={beam}
             style={{
               position: "absolute",
               left: 0,
@@ -523,67 +505,80 @@ export default function ScannerCard() {
               pointerEvents: "none",
               opacity: 0,
               background:
-                "linear-gradient(180deg,transparent,rgba(131,200,24,.13) 70%,rgba(131,200,24,.34))",
-              borderBottom: "1.5px solid var(--lime)",
-              boxShadow: "0 0 30px rgba(131,200,24,.4)",
+                "linear-gradient(180deg,transparent,rgba(92,138,240,.14) 70%,rgba(92,138,240,.32))",
+              borderBottom: "1.5px solid var(--in)",
+              boxShadow: "0 0 26px rgba(92,138,240,.4)",
               zIndex: 3,
             }}
           />
           <div style={{ position: "relative", zIndex: 2 }}>
-            <div style={{ ...lnStyle, color: "#6f6f76" }}>
+            <div style={lnStyle}>
               <span style={numStyle}>1</span>
-              <span style={kw}>import</span> {"{ db } "}
-              <span style={kw}>from</span> <span style={str}>&quot;./db&quot;</span>;
+              <span style={{ color: "#C586C0" }}>import</span> {"{ db } "}
+              <span style={{ color: "#C586C0" }}>from</span>{" "}
+              <span style={{ color: "#CE9178" }}>&quot;./db&quot;</span>;
             </div>
-            <div style={{ ...lnStyle, color: "#6f6f76" }}>
+            <div style={lnStyle}>
               <span style={numStyle}>2</span>
             </div>
-            <div style={lnStyle}>
+            <div style={lnStyleLight}>
               <span style={numStyle}>3</span>
-              <span style={kw}>export async function</span>{" "}
-              <span style={fn}>getUser</span>(req, res) {"{"}
+              <span style={{ color: "#C586C0" }}>export async function</span>{" "}
+              <span style={{ color: "#DCDCAA" }}>getUser</span>(req, res) {"{"}
             </div>
-            <div style={lnStyle}>
-              <span style={numStyle}>4</span>
-              {"  "}
-              <span style={kw}>const</span> id = req.params.id;
+            <div style={lnStyleLight}>
+              <span style={numStyle}>4</span> {"  "}
+              <span style={{ color: "#C586C0" }}>const</span> id = req.params.id;
             </div>
-            <div ref={line6Ref} style={bugLine}>
-              <span style={numStyle}>5</span>
-              {"  "}
-              <span style={kw}>const</span> query ={" "}
-              <span style={str}>
+            <div
+              ref={line5}
+              style={{
+                ...lnStyleLight,
+                position: "relative",
+                transition: "background .3s,box-shadow .3s",
+              }}
+            >
+              <span style={numStyle}>5</span> {"  "}
+              <span style={{ color: "#C586C0" }}>const</span> query ={" "}
+              <span style={{ color: "#CE9178" }}>
                 &quot;SELECT * FROM users WHERE id = &quot;
               </span>{" "}
               + id;
             </div>
-            <div ref={line7Ref} style={bugLine}>
-              <span style={numStyle}>6</span>
-              {"  "}
-              <span style={kw}>const</span> rows = db.
-              <span style={fn}>query</span>(query);
+            <div
+              ref={line6}
+              style={{
+                ...lnStyleLight,
+                position: "relative",
+                transition: "background .3s,box-shadow .3s",
+              }}
+            >
+              <span style={numStyle}>6</span> {"  "}
+              <span style={{ color: "#C586C0" }}>const</span> rows = db.
+              <span style={{ color: "#DCDCAA" }}>query</span>(query);
             </div>
-            <div style={{ ...lnStyle, color: "#6f6f76" }}>
+            <div style={lnStyle}>
               <span style={numStyle}>7</span>
             </div>
-            <div ref={line9Ref} style={bugLine}>
-              <span style={numStyle}>8</span>
-              {"  "}
-              <span style={kw}>if</span> (rows == <span style={kw}>null</span>){" "}
-              <span style={kw}>return</span> res.<span style={fn}>send</span>(
-              <span style={num}>404</span>);
+            <div style={lnStyleLight}>
+              <span style={numStyle}>8</span> {"  "}
+              <span style={{ color: "#C586C0" }}>if</span> (rows =={" "}
+              <span style={{ color: "#C586C0" }}>null</span>){" "}
+              <span style={{ color: "#C586C0" }}>return</span> res.
+              <span style={{ color: "#DCDCAA" }}>send</span>(
+              <span style={{ color: "#B5CEA8" }}>404</span>);
             </div>
-            <div style={lnStyle}>
-              <span style={numStyle}>9</span>
-              {"  "}
-              <span style={kw}>const</span> user = rows[<span style={num}>0</span>];
+            <div style={lnStyleLight}>
+              <span style={numStyle}>9</span> {"  "}
+              <span style={{ color: "#C586C0" }}>const</span> user = rows[
+              <span style={{ color: "#B5CEA8" }}>0</span>];
             </div>
-            <div style={lnStyle}>
-              <span style={numStyle}>10</span>
-              {"  "}res.<span style={fn}>json</span>({"{ "}id: user.id, name:
-              user.name {"}"});
+            <div style={lnStyleLight}>
+              <span style={numStyle}>10</span> {"  "}res.
+              <span style={{ color: "#DCDCAA" }}>json</span>({"{"} id: user.id,
+              name: user.name {"}"});
             </div>
-            <div style={lnStyle}>
+            <div style={lnStyleLight}>
               <span style={numStyle}>11</span>
               {"}"}
             </div>
@@ -592,144 +587,31 @@ export default function ScannerCard() {
 
         {/* findings rail */}
         <div
+          ref={findings}
           style={{
             borderTop: "1px solid var(--line)",
-            background: "#1a1a1d",
-            height: 188,
+            background: "var(--surf)",
+            height: 170,
             overflowY: "auto",
           }}
-        >
-          {FINDINGS.map((r, i) => (
-            <div
-              key={r.tag}
-              ref={(el) => {
-                findingRefs.current[i] = el;
-              }}
-              style={{
-                display: "flex",
-                gap: 12,
-                padding: "13px 16px",
-                borderBottom: "1px solid var(--line)",
-                opacity: 0,
-                transform: "translateY(8px)",
-                transition: "opacity .4s,transform .4s",
-              }}
-            >
-              <span
-                style={{
-                  width: 3,
-                  borderRadius: 2,
-                  background: r.c,
-                  flex: "none",
-                }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    flexWrap: "wrap",
-                    marginBottom: 4,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: mono,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      letterSpacing: ".06em",
-                      color: r.sevc,
-                    }}
-                  >
-                    {r.sev}
-                  </span>
-                  <span
-                    style={{ fontFamily: mono, fontSize: 10, color: "var(--tx3)" }}
-                  >
-                    {r.ln}
-                  </span>
-                  <span style={{ fontFamily: mono, fontSize: 10, color: r.c }}>
-                    {r.tag}
-                  </span>
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      fontFamily: mono,
-                      fontSize: 10,
-                      color: "var(--tx3)",
-                    }}
-                  >
-                    {r.votes} agents
-                  </span>
-                </div>
-                <div
-                  style={{
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    color: "var(--tx)",
-                    marginBottom: 2,
-                  }}
-                >
-                  {r.t}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--tx2)",
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {r.d}
-                </div>
-                <div
-                  style={{
-                    marginTop: 7,
-                    height: 3,
-                    borderRadius: 2,
-                    background: "rgba(255,255,255,.06)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: parseFloat(r.conf) * 100 + "%",
-                      background: r.c,
-                      borderRadius: 2,
-                    }}
-                  />
-                </div>
-                <div
-                  style={{
-                    fontFamily: mono,
-                    fontSize: 10,
-                    color: "var(--tx3)",
-                    marginTop: 4,
-                  }}
-                >
-                  confidence {r.conf}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+          className="bt-scroll"
+        />
 
         {/* verdict gate */}
         <div
-          ref={verdictRef}
+          ref={verdict}
           style={{
             display: "flex",
             alignItems: "center",
             gap: 13,
             padding: "14px 16px",
             borderTop: "1px solid var(--line)",
-            background: "#1c1c1f",
+            background: "#2D2D30",
             transition: "background .4s",
           }}
         >
           <div
-            ref={verdictIconRef}
+            ref={verdictIcon}
             style={{
               width: 34,
               height: 34,
@@ -739,36 +621,26 @@ export default function ScannerCard() {
               alignItems: "center",
               justifyContent: "center",
               background: "rgba(255,255,255,.05)",
-              border: "1px solid var(--line2)",
+              border: "1px solid var(--line)",
               transition: "all .4s",
             }}
           >
             <span
-              ref={verdictSpinRef}
+              ref={verdictSpin}
               style={{
                 width: 16,
                 height: 16,
                 borderRadius: "50%",
                 border: "2px solid var(--tx3)",
-                borderTopColor: "var(--lime)",
+                borderTopColor: "var(--in)",
                 animation: "bt-spin .8s linear infinite",
+                display: "block",
               }}
             />
-            <span
-              ref={verdictBangRef}
-              style={{
-                display: "none",
-                color: "#ff8a95",
-                fontSize: 18,
-                fontWeight: 800,
-              }}
-            >
-              !
-            </span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
-              ref={verdictTitleRef}
+              ref={verdictTitle}
               style={{
                 fontSize: 14,
                 fontWeight: 700,
@@ -776,10 +648,10 @@ export default function ScannerCard() {
                 color: "var(--tx2)",
               }}
             >
-              Coordinator reconciling 3 agents&hellip;
+              Coordinator reconciling 2 agents…
             </div>
             <div
-              ref={verdictSubRef}
+              ref={verdictSub}
               style={{
                 fontSize: 12,
                 color: "var(--tx3)",
@@ -787,11 +659,11 @@ export default function ScannerCard() {
                 marginTop: 2,
               }}
             >
-              deduping overlaps &middot; resolving severity
+              deduping overlaps · resolving severity
             </div>
           </div>
           <div
-            ref={verdictTagRef}
+            ref={verdictTag}
             style={{
               fontFamily: mono,
               fontSize: 11,
@@ -801,7 +673,7 @@ export default function ScannerCard() {
               borderRadius: 7,
               background: "rgba(255,255,255,.05)",
               color: "var(--tx3)",
-              border: "1px solid var(--line2)",
+              border: "1px solid var(--line)",
               whiteSpace: "nowrap",
               transition: "all .4s",
             }}
@@ -815,18 +687,18 @@ export default function ScannerCard() {
 }
 
 function Meter({
-  label,
   color,
+  label,
   countRef,
   barRef,
 }: {
-  label: string;
   color: string;
+  label: string;
   countRef: React.RefObject<HTMLSpanElement | null>;
   barRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <div style={{ background: "#1c1c1f", padding: "11px 13px" }}>
+    <div style={{ background: "var(--surf)", padding: "11px 14px" }}>
       <div
         style={{
           display: "flex",
@@ -840,8 +712,9 @@ function Meter({
         />
         <span
           style={{
+            fontFamily: mono,
             fontSize: 11,
-            fontWeight: 700,
+            fontWeight: 600,
             letterSpacing: ".04em",
             color: "var(--tx2)",
           }}

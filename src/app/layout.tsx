@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, JetBrains_Mono } from "next/font/google";
+import { Red_Hat_Display, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
-const archivo = Archivo({
+const redHatDisplay = Red_Hat_Display({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
-  variable: "--font-archivo",
+  variable: "--font-red-hat-display",
   display: "swap",
 });
 
@@ -18,22 +18,23 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 // No production domain yet — update when the marketing site is deployed.
-const siteUrl = "https://bugtrap.dev";
+const siteUrl = "https://sidecode.dev";
 const tagline =
-  "AI ships code faster than humans can review it. BugTrap runs three specialist agents on every change and hands you one clear safe-to-merge or blocked verdict.";
+  "Connect a repo. Sidecode maps it live and re-scans every push — two specialist agents and a coordinator find problems, draft fixes, and open the PR.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "BugTrap — Ship fast. Merge with confidence.",
-    template: "%s | BugTrap",
+    default: "Sidecode — Review that rides side by side.",
+    template: "%s | Sidecode",
   },
   description: tagline,
-  applicationName: "BugTrap",
+  applicationName: "Sidecode",
   keywords: [
     "code review",
     "AI code review",
     "multi-agent",
+    "live code companion",
     "pull request review",
     "static analysis",
     "Gemini",
@@ -41,18 +42,18 @@ export const metadata: Metadata = {
     "CI/CD gate",
     "vibe coding",
   ],
-  authors: [{ name: "BugTrap" }],
+  authors: [{ name: "Sidecode" }],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "BugTrap",
-    title: "BugTrap — Ship fast. Merge with confidence.",
+    siteName: "Sidecode",
+    title: "Sidecode — Review that rides side by side.",
     description: tagline,
   },
   twitter: {
     card: "summary_large_image",
-    title: "BugTrap — Ship fast. Merge with confidence.",
+    title: "Sidecode — Review that rides side by side.",
     description: tagline,
   },
   alternates: {
@@ -67,7 +68,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1d1d20",
+  themeColor: "#1e1e1e",
   colorScheme: "dark",
 };
 
@@ -79,7 +80,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${archivo.variable} ${jetbrainsMono.variable}`}
+      className={`${redHatDisplay.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body>

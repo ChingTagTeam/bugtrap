@@ -2,6 +2,7 @@ console.log("test.js started");
 import { scanForSecrets } from './secretDetector.js';
 import { generateFixes }  from './fixAgent.js';
 import { applyFixes }     from './applyFixes.js';
+import { findBugs }       from './bugFinder.js';
 
 // ── Sample file with two planted secrets ──────────────────────────────────────
 // Single-line assignments → expect fix_type "auto" for both.
@@ -36,3 +37,34 @@ console.log(JSON.stringify(fixResult, null, 2));
 // ── Step 3: Apply (dry-run — no files written) ────────────────────────────────
 console.log('\n━━━ Step 3: Apply Fixes (dry-run) ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 await applyFixes(fixResult, { apply: false });
+
+// ── Bug Finder (Correctness agent) ─────────────────────────────────────────────
+// Independent stage — exercises the correctness agent on a file with planted
+// logic bugs: a null dereference, an off-by-one, and an unhandled rejection.
+const BUG_PATH = 'src/services/order.js';
+const BUG_CODE = `
+export async function getTotal(cart) {
+  let total = 0;
+  // off-by-one: <= reads cart.items[length] which is undefined
+  for (let i = 0; i <= cart.items.length; i++) {
+    total += cart.items[i].price;
+  }
+  return total;
+}
+
+export function findUser(users, id) {
+  const user = users.find(u => u.id === id);
+  // null dereference: find() returns undefined when no match
+  return user.name.toUpperCase();
+}
+
+export function saveOrder(order) {
+  // unhandled rejection: promise neither awaited nor caught
+  db.orders.insert(order);
+  return { ok: true };
+}
+`.trim();
+
+console.log('\n━━━ Bug Finder: Correctness Agent ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+const bugResult = await findBugs(BUG_PATH, BUG_CODE);
+console.log(JSON.stringify(bugResult, null, 2));

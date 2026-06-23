@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#1E1E1E;color:#D4D4D4;font-family:'Red Hat Display',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  ::selection{background:rgba(92,138,240,.35);color:#fff}
+  @keyframes sc-glow{0%,100%{opacity:.4}50%{opacity:.85}}
+  @keyframes sc-spin{to{transform:rotate(360deg)}}
+  @keyframes sc-shimmer{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+  @keyframes sc-dash{to{background-position:32px 0}}
+  @keyframes sc-ring{0%{transform:scale(.55);opacity:.7}100%{transform:scale(2.1);opacity:0}}
+  @keyframes sc-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes sc-orbit{to{transform:rotate(360deg)}}
+  @keyframes sc-flow{0%{left:-12%;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:100%;opacity:0}}
+  @keyframes sc-pulse{0%{box-shadow:0 0 0 0 rgba(232,163,61,.45)}70%{box-shadow:0 0 0 13px rgba(232,163,61,0)}100%{box-shadow:0 0 0 0 rgba(232,163,61,0)}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+  @media (max-width:920px){
+    .hero-grid{grid-template-columns:1fr!important;gap:48px!important;padding-top:104px!important}
+    .stats-grid{grid-template-columns:1fr 1fr!important}
+    .how-grid{grid-template-columns:1fr!important}
+    .feat-grid{grid-template-columns:1fr!important}
+    .feat-wide{grid-column:auto!important}
+    .stack-grid{grid-template-columns:1fr!important}
+    .why-pad{padding:32px!important}
+    .nav-links{display:none!important}
+    .h1-big{font-size:46px!important}
+    .h2-big{font-size:34px!important}
+  }
+  @media (max-width:560px){
+    .stats-grid{grid-template-columns:1fr!important}
+    .graph-body{height:480px!important}
+  }
+</style>
+</helmet>
+<div ref="{{ setRoot }}" style="position:relative;--in:#5C8AF0;--in2:#82A8F6;--bg:#1E1E1E;--surf:#252526;--elev:#2D2D30;--line:#3C3C3C;--tx:#D4D4D4;--tx2:#9D9D9D;--tx3:#6E6E6E;--sec:#F26D78;--bug:#E8A33D;--safe:#4EC9A8;--warn:#E5C07B;font-family:'Red Hat Display',sans-serif;color:var(--tx);background:var(--bg);min-height:100vh;overflow:hidden">
+
+  <canvas ref="{{ setCanvas }}" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>
+
+  <!-- NAV -->
+  <nav ref="{{ setNav }}" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:18px 32px;transition:background .3s,padding .3s,border-color .3s;border-bottom:1px solid transparent">
+    <a href="#top" style="display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--tx)">
+      <img src="uploads/sidecodelogo-removebg-preview.png" alt="Sidecode" style="width:30px;height:30px;object-fit:contain">
+      <span style="font-weight:800;font-size:20px;letter-spacing:-.025em">Sidecode</span>
+    </a>
+    <div class="nav-links" style="display:flex;align-items:center;gap:32px">
+      <a href="#live" style="text-decoration:none;color:var(--tx2);font-size:14.5px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">Live companion</a>
+      <a href="#how" style="text-decoration:none;color:var(--tx2);font-size:14.5px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">How it works</a>
+      <a href="#features" style="text-decoration:none;color:var(--tx2);font-size:14.5px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">Features</a>
+      <a href="#why" style="text-decoration:none;color:var(--tx2);font-size:14.5px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">Engine</a>
+    </div>
+    <a href="#live" data-magnetic style="display:inline-flex;align-items:center;gap:8px;background:var(--in);color:#0e1626;text-decoration:none;font-size:14px;font-weight:700;padding:10px 18px;border-radius:9px;transition:background .2s,transform .1s">Connect a repo</a>
+  </nav>
+
+  <span id="top"></span>
+
+  <!-- HERO -->
+  <header class="hero-grid" style="position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:140px 32px 64px;display:grid;grid-template-columns:1.02fr 1.08fr;gap:54px;align-items:center">
+    <div>
+      <h1 class="h1-big" data-reveal style="font-size:62px;line-height:1.03;font-weight:800;letter-spacing:-.035em;margin:8px 0 20px">Review that<br>rides <span style="color:var(--in)">side by side.</span></h1>
+      <p data-reveal data-reveal-delay="120" style="font-size:18.5px;line-height:1.55;color:var(--tx2);margin:0 0 34px;max-width:466px;font-weight:400">Connect a repo. Sidecode maps it live and re-scans every push, finding problems, drafting fixes, opening the PR.</p>
+      <div data-reveal data-reveal-delay="180" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <a href="#live" data-magnetic style="display:inline-flex;align-items:center;gap:9px;background:var(--in);color:#0e1626;text-decoration:none;font-size:16px;font-weight:700;padding:15px 26px;border-radius:11px;transition:background .2s,transform .1s">Connect a repo <span>&rarr;</span></a>
+        <a href="#how" style="display:inline-flex;align-items:center;gap:9px;background:transparent;border:1px solid var(--line);color:var(--tx);text-decoration:none;font-size:16px;font-weight:600;padding:15px 24px;border-radius:11px;transition:background .2s,border-color .2s" onmouseover="this.style.background='var(--elev)';this.style.borderColor='#4a4a4e'" onmouseout="this.style.background='transparent';this.style.borderColor='var(--line)'">See how it works</a>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE SCANNER CARD -->
+    <div ref="{{ setTilt }}" data-reveal data-reveal-delay="120" style="position:relative;perspective:1400px">
+      <div ref="{{ setTiltInner }}" style="position:relative;border-radius:14px;background:var(--surf);border:1px solid var(--line);box-shadow:0 40px 90px -36px rgba(0,0,0,.8);transform-style:preserve-3d;transition:transform .15s ease-out;overflow:hidden">
+
+        <!-- card header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--line);background:#2D2D30">
+          <div style="display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--tx2)">
+            <span style="display:flex;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#3C3C3C"></span><span style="width:11px;height:11px;border-radius:50%;background:#3C3C3C"></span><span style="width:11px;height:11px;border-radius:50%;background:#3C3C3C"></span></span>
+            <span style="margin-left:6px">api/users.ts</span>
+          </div>
+          <div ref="{{ setStatus }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--tx3);display:flex;align-items:center;gap:7px"><span ref="{{ setStatusDot }}" style="width:7px;height:7px;border-radius:50%;background:var(--tx3)"></span><span ref="{{ setStatusTxt }}">READY</span></div>
+        </div>
+
+        <!-- agent meters (TWO) -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-bottom:1px solid var(--line)">
+          <div style="background:var(--surf);padding:11px 14px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:2px;background:var(--sec)"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--tx2)">SECURITY</span><span ref="{{ setSecCount }}" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3)">0</span></div>
+            <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden"><div ref="{{ setSecBar }}" style="height:100%;width:0%;background:var(--sec);border-radius:3px;transition:width .25s ease-out"></div></div>
+          </div>
+          <div style="background:var(--surf);padding:11px 14px">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px"><span style="width:8px;height:8px;border-radius:2px;background:var(--bug)"></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--tx2)">BUG</span><span ref="{{ setBugCount }}" style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3)">0</span></div>
+            <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden"><div ref="{{ setBugBar }}" style="height:100%;width:0%;background:var(--bug);border-radius:3px;transition:width .25s ease-out"></div></div>
+          </div>
+        </div>
+
+        <!-- code with scan beam -->
+        <div style="position:relative;padding:14px 0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.85;background:#1E1E1E">
+          <div ref="{{ setBeam }}" style="position:absolute;left:0;right:0;top:0;height:54px;pointer-events:none;opacity:0;background:linear-gradient(180deg,transparent,rgba(92,138,240,.14) 70%,rgba(92,138,240,.32));border-bottom:1.5px solid var(--in);box-shadow:0 0 26px rgba(92,138,240,.4);z-index:3"></div>
+          <div style="position:relative;z-index:2">
+            <div style="padding:0 16px;color:#6E6E6E"><span style="display:inline-block;width:26px;color:#45454c">1</span><span style="color:#C586C0">import</span> { db } <span style="color:#C586C0">from</span> <span style="color:#CE9178">"./db"</span>;</div>
+            <div style="padding:0 16px;color:#6E6E6E"><span style="display:inline-block;width:26px;color:#45454c">2</span></div>
+            <div style="padding:0 16px;color:#D4D4D4"><span style="display:inline-block;width:26px;color:#45454c">3</span><span style="color:#C586C0">export async function</span> <span style="color:#DCDCAA">getUser</span>(req, res) {</div>
+            <div style="padding:0 16px;color:#D4D4D4"><span style="display:inline-block;width:26px;color:#45454c">4</span>  <span style="color:#C586C0">const</span> id = req.params.id;</div>
+            <div ref="{{ setLine5 }}" style="padding:0 16px;color:#D4D4D4;position:relative;transition:background .3s,box-shadow .3s"><span style="display:inline-block;width:26px;color:#45454c">5</span>  <span style="color:#C586C0">const</span> query = <span style="color:#CE9178">"SELECT * FROM users WHERE id = "</span> + id;</div>
+            <div ref="{{ setLine6 }}" style="padding:0 16px;color:#D4D4D4;position:relative;transition:background .3s,box-shadow .3s"><span style="display:inline-block;width:26px;color:#45454c">6</span>  <span style="color:#C586C0">const</span> rows = db.<span style="color:#DCDCAA">query</span>(query);</div>
+            <div style="padding:0 16px;color:#6E6E6E"><span style="display:inline-block;width:26px;color:#45454c">7</span></div>
+            <div style="padding:0 16px;color:#D4D4D4"><span style="display:inline-block;width:26px;color:#45454c">8</span>  <span style="color:#C586C0">if</span> (rows == <span style="color:#C586C0">null</span>) <span style="color:#C586C0">return</span> res.<span style="color:#DCDCAA">send</span>(<span style="color:#B5CEA8">404</span>);</div>
+            <div style="padding:0 16px;color:#D4D4D4"><span style="display:inline-block;width:26px;color:#45454c">9</span>  <span style="color:#C586C0">const</span> user = rows[<span style="color:#B5CEA8">0</span>];</div>
+            <div style="padding:0 16px;color:#D4D4D4"><span style="display:inline-block;width:26px;color:#45454c">10</span>  res.<span style="color:#DCDCAA">json</span>({ id: user.id, name: user.name });</div>
+            <div style="padding:0 16px;color:#D4D4D4"><span style="display:inline-block;width:26px;color:#45454c">11</span>}</div>
+          </div>
+        </div>
+
+        <!-- findings rail -->
+        <div ref="{{ setFindings }}" style="border-top:1px solid var(--line);background:var(--surf);height:170px;overflow-y:auto"></div>
+
+        <!-- verdict gate -->
+        <div ref="{{ setVerdict }}" style="display:flex;align-items:center;gap:13px;padding:14px 16px;border-top:1px solid var(--line);background:#2D2D30;transition:background .4s">
+          <div ref="{{ setVerdictIcon }}" style="width:34px;height:34px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.05);border:1px solid var(--line);transition:all .4s">
+            <span ref="{{ setVerdictSpin }}" style="width:16px;height:16px;border-radius:50%;border:2px solid var(--tx3);border-top-color:var(--in);animation:sc-spin .8s linear infinite"></span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div ref="{{ setVerdictTitle }}" style="font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--tx2)">Coordinator reconciling 2 agents&hellip;</div>
+            <div ref="{{ setVerdictSub }}" style="font-size:12px;color:var(--tx3);font-family:'JetBrains Mono',monospace;margin-top:2px">deduping overlaps &middot; resolving severity</div>
+          </div>
+          <div ref="{{ setVerdictTag }}" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;padding:6px 11px;border-radius:7px;background:rgba(255,255,255,.05);color:var(--tx3);border:1px solid var(--line);white-space:nowrap;transition:all .4s">PENDING</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- STATS BAND -->
+  <section style="position:relative;z-index:2;max-width:1200px;margin:30px auto 0;padding:0 32px">
+    <div class="stats-grid" data-reveal style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden">
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="2" data-suffix="" style="font-size:42px;font-weight:800;letter-spacing:-.03em">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">specialist agents per review</div></div>
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="1" data-suffix="" style="font-size:42px;font-weight:800;letter-spacing:-.03em;color:var(--in)">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">reconciled verdict, no noise</div></div>
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="28" data-prefix="&lt;" data-suffix="s" style="font-size:42px;font-weight:800;letter-spacing:-.03em">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">from push to verdict</div></div>
+      <div style="background:var(--bg);padding:30px 26px"><div class="counter" data-to="100" data-suffix="%" style="font-size:42px;font-weight:800;letter-spacing:-.03em">0</div><div style="color:var(--tx2);font-size:14px;margin-top:4px;font-weight:500">of changed files re-scanned</div></div>
+    </div>
+  </section>
+
+  <!-- LIVE COMPANION (centerpiece) -->
+  <section id="live" style="position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:120px 32px 40px">
+    <div data-reveal style="text-align:center;max-width:720px;margin:0 auto 52px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--in);margin-bottom:16px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--in);box-shadow:0 0 8px var(--in);animation:sc-glow 2s infinite"></span>LIVE COMPANION</div>
+      <h2 class="h2-big" style="font-size:44px;font-weight:800;letter-spacing:-.03em;margin:0 0 16px;line-height:1.05">Your repo, alive on a graph.</h2>
+      <p style="font-size:18px;color:var(--tx2);line-height:1.55;margin:0">Connect a repo and Sidecode maps it node by node. Push a change and it re-scans only what moved &mdash; the touched file lights up, a finding lands, a fix is drafted, and the node goes green when it&rsquo;s safe to merge.</p>
+    </div>
+
+    <div data-reveal ref="{{ setGraph }}" style="border:1px solid var(--line);border-radius:16px;background:var(--surf);overflow:hidden;box-shadow:0 30px 80px -40px rgba(0,0,0,.7)">
+      <!-- editor header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid var(--line);background:#2D2D30">
+        <div style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--tx2)">
+          <img src="uploads/sidecodelogo-removebg-preview.png" alt="" style="width:17px;height:17px;object-fit:contain">
+          <span>sidecode</span><span style="color:var(--tx3)">&middot;</span><span style="color:var(--tx3)">main</span>
+        </div>
+        <div ref="{{ setGStatus }}" style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;letter-spacing:.06em;color:var(--tx3)"><span ref="{{ setGStatusDot }}" style="width:7px;height:7px;border-radius:50%;background:var(--tx3);transition:background .3s,box-shadow .3s"></span><span ref="{{ setGStatusTxt }}">IDLE</span></div>
+      </div>
+      <!-- graph body -->
+      <div class="graph-body" style="position:relative;height:420px;background:#1E1E1E;overflow:hidden">
+        <svg viewBox="0 0 640 400" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">
+          <line class="gedge" x1="320" y1="46" x2="120" y2="170" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="320" y1="46" x2="320" y2="200" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="320" y1="46" x2="520" y2="170" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="120" y1="170" x2="320" y2="200" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="520" y1="170" x2="320" y2="200" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="320" y1="200" x2="180" y2="330" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="320" y1="200" x2="470" y2="330" stroke="#3C3C3C" stroke-width="1.4"></line>
+          <line class="gedge" x1="520" y1="170" x2="470" y2="330" stroke="#3C3C3C" stroke-width="1.4"></line>
+        </svg>
+
+        <div class="gnodewrap" style="position:absolute;left:50%;top:11.5%;transform:translate(-50%,-50%)"><div class="gnode" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 14px;border-radius:9px;background:var(--elev);border:1px solid var(--line);color:var(--tx2);white-space:nowrap;transition:opacity .5s,transform .5s">routes.ts</div></div>
+        <div class="gnodewrap" style="position:absolute;left:18.75%;top:42.5%;transform:translate(-50%,-50%)"><div class="gnode" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 14px;border-radius:9px;background:var(--elev);border:1px solid var(--line);color:var(--tx2);white-space:nowrap;transition:opacity .5s,transform .5s">auth.ts</div></div>
+
+        <div class="gnodewrap" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4">
+          <div ref="{{ setGTarget }}" class="gnode" style="position:relative;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;padding:11px 16px;border-radius:10px;background:var(--elev);border:1.5px solid var(--line);color:var(--tx);white-space:nowrap;transition:opacity .5s,transform .5s,border-color .4s,background .4s,box-shadow .4s">
+            api/users.ts
+            <div ref="{{ setGBadge }}" style="position:absolute;top:-12px;right:-12px;display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:999px;background:var(--sec);color:#1E1E1E;opacity:0;transform:scale(.6);transition:opacity .35s,transform .35s,background .35s">1 ISSUE</div>
+          </div>
+        </div>
+
+        <div class="gnodewrap" style="position:absolute;left:81.25%;top:42.5%;transform:translate(-50%,-50%)"><div class="gnode" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 14px;border-radius:9px;background:var(--elev);border:1px solid var(--line);color:var(--tx2);white-space:nowrap;transition:opacity .5s,transform .5s">db.ts</div></div>
+        <div class="gnodewrap" style="position:absolute;left:28.1%;top:82.5%;transform:translate(-50%,-50%)"><div class="gnode" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 14px;border-radius:9px;background:var(--elev);border:1px solid var(--line);color:var(--tx2);white-space:nowrap;transition:opacity .5s,transform .5s">utils.ts</div></div>
+        <div class="gnodewrap" style="position:absolute;left:73.4%;top:82.5%;transform:translate(-50%,-50%)"><div class="gnode" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:9px 14px;border-radius:9px;background:var(--elev);border:1px solid var(--line);color:var(--tx2);white-space:nowrap;transition:opacity .5s,transform .5s">index.ts</div></div>
+
+        <!-- push chip -->
+        <div ref="{{ setGPush }}" style="position:absolute;left:50%;top:24px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;padding:7px 13px;border-radius:999px;background:var(--surf);border:1px solid var(--line);color:var(--tx2);opacity:0;transition:opacity .4s,transform .4s;white-space:nowrap">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--in)"></span>push <span style="color:var(--tx3)">3f9a2c1</span> &middot; <span style="color:var(--tx3)">api/users.ts</span>
+        </div>
+
+        <!-- PR chip -->
+        <div ref="{{ setGPR }}" style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%) translateY(8px);display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:9px 15px;border-radius:11px;background:rgba(78,201,168,.1);border:1px solid rgba(78,201,168,.4);color:var(--safe);opacity:0;transition:opacity .4s,transform .4s;white-space:nowrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          fix drafted &middot; PR #482 &middot; safe to merge
+        </div>
+      </div>
+      <!-- event log bar -->
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:1px solid var(--line);background:#2D2D30;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--tx3)">
+        <span ref="{{ setGLogDot }}" style="width:7px;height:7px;border-radius:50%;background:var(--tx3);flex:none;transition:background .3s,box-shadow .3s"></span>
+        <span ref="{{ setGLog }}" style="color:var(--tx2)">connect a repository to begin</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" style="position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:120px 32px 40px">
+    <div data-reveal style="text-align:center;max-width:680px;margin:0 auto 64px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--in);margin-bottom:16px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--in);box-shadow:0 0 8px var(--in);animation:sc-glow 2s infinite"></span>THE REVIEW LOOP</div>
+      <h2 class="h2-big" style="font-size:44px;font-weight:800;letter-spacing:-.03em;margin:0 0 16px;line-height:1.05">Two lenses. One verdict.</h2>
+      <p style="font-size:18px;color:var(--tx2);line-height:1.55;margin:0">Every changed file is inspected in parallel by two specialists. A coordinating agent reconciles their findings &mdash; deduping overlaps and resolving severity disagreements &mdash; into a single prioritized call.</p>
+    </div>
+
+    <div class="how-grid" data-reveal style="position:relative;display:grid;grid-template-columns:0.85fr 1.4fr 0.85fr;gap:24px;align-items:center">
+      <!-- animated flow connectors -->
+      <div style="position:absolute;top:50%;left:25%;width:6%;height:18px;transform:translateY(-50%);z-index:3;pointer-events:none">
+        <div style="position:absolute;top:50%;left:0;right:0;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,rgba(92,138,240,.55) 0 6px,transparent 6px 12px);background-size:18px 2px;animation:sc-dash .55s linear infinite"></div>
+        <div style="position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:var(--in2);box-shadow:0 0 11px var(--in);transform:translateY(-50%);animation:sc-flow 1.7s linear infinite"></div>
+      </div>
+      <div style="position:absolute;top:50%;left:71%;width:6%;height:18px;transform:translateY(-50%);z-index:3;pointer-events:none">
+        <div style="position:absolute;top:50%;left:0;right:0;height:2px;transform:translateY(-50%);background:repeating-linear-gradient(90deg,rgba(92,138,240,.55) 0 6px,transparent 6px 12px);background-size:18px 2px;animation:sc-dash .55s linear infinite"></div>
+        <div style="position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:var(--in2);box-shadow:0 0 11px var(--in);transform:translateY(-50%);animation:sc-flow 1.7s linear infinite .4s"></div>
+      </div>
+
+      <!-- input -->
+      <div style="display:flex;flex-direction:column;gap:14px;z-index:2">
+        <div style="display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surf)"><span style="width:9px;height:9px;border-radius:2px;background:var(--tx2)"></span><div><div style="font-weight:700;font-size:15px">Changed file</div><div style="font-size:12.5px;color:var(--tx3);font-family:'JetBrains Mono',monospace">on every push</div></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surf)"><span style="width:9px;height:9px;border-radius:2px;background:var(--tx2)"></span><div><div style="font-weight:700;font-size:15px">Diff &amp; context</div><div style="font-size:12.5px;color:var(--tx3);font-family:'JetBrains Mono',monospace">graph neighbors</div></div></div>
+        <div style="display:flex;align-items:center;gap:11px;padding:16px 18px;border:1px solid var(--line);border-radius:13px;background:var(--surf)"><span style="width:9px;height:9px;border-radius:2px;background:var(--tx2)"></span><div><div style="font-weight:700;font-size:15px">Pull request</div><div style="font-size:12.5px;color:var(--tx3);font-family:'JetBrains Mono',monospace">full review pass</div></div></div>
+      </div>
+
+      <!-- agents -->
+      <div style="position:relative;display:grid;grid-template-columns:1fr;gap:14px;padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--surf);z-index:2">
+        <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;color:var(--in)">PARALLEL ANALYSIS</div>
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;padding:15px 17px;margin-top:22px;border:1px solid rgba(242,109,120,.3);border-radius:13px;background:rgba(242,109,120,.06);transition:transform .25s" style-hover="transform:translateY(-3px)"><span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(242,109,120,.14) 50%,transparent 65%);transform:translateX(-120%);animation:sc-shimmer 4.2s ease-in-out infinite;pointer-events:none"></span><span style="position:relative;width:34px;height:34px;border-radius:9px;background:rgba(242,109,120,.14);color:var(--sec);display:flex;align-items:center;justify-content:center;flex:none"><span style="position:absolute;inset:0;border-radius:9px;border:1px solid rgba(242,109,120,.5);animation:sc-ring 2.4s ease-out infinite"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span><div style="flex:1;position:relative"><div style="font-weight:700;font-size:15.5px">Security agent</div><div style="font-size:13px;color:var(--tx2)">vulnerabilities, secrets, exposure, unsafe data flow</div></div></div>
+        <div style="position:relative;overflow:hidden;display:flex;align-items:center;gap:13px;padding:15px 17px;border:1px solid rgba(232,163,61,.3);border-radius:13px;background:rgba(232,163,61,.06);transition:transform .25s" style-hover="transform:translateY(-3px)"><span style="position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(232,163,61,.14) 50%,transparent 65%);transform:translateX(-120%);animation:sc-shimmer 4.2s ease-in-out infinite .5s;pointer-events:none"></span><span style="position:relative;width:34px;height:34px;border-radius:9px;background:rgba(232,163,61,.14);color:var(--bug);display:flex;align-items:center;justify-content:center;flex:none"><span style="position:absolute;inset:0;border-radius:9px;border:1px solid rgba(232,163,61,.5);animation:sc-ring 2.4s ease-out infinite .8s"></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:relative"><path d="m8 2 1.88 1.88"></path><path d="M14.12 3.88 16 2"></path><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"></path><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"></path><path d="M12 20v-9"></path><path d="M6.53 9C4.6 8.8 3 7.1 3 5"></path><path d="M6 13H2"></path><path d="M3 21c0-2.1 1.7-3.9 3.8-4"></path><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"></path><path d="M22 13h-4"></path><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"></path></svg></span><div style="flex:1;position:relative"><div style="font-weight:700;font-size:15.5px">Bug agent</div><div style="font-size:13px;color:var(--tx2)">logic errors, edge cases, broken behavior</div></div></div>
+      </div>
+
+      <!-- coordinator + verdict -->
+      <div style="display:flex;flex-direction:column;gap:16px;z-index:2">
+        <div style="padding:20px;border:1px solid var(--in);border-radius:16px;background:rgba(92,138,240,.06);position:relative;overflow:hidden">
+          <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;margin-bottom:13px">
+            <span style="position:absolute;inset:-6px;border-radius:50%;border:1px dashed rgba(92,138,240,.45);animation:sc-orbit 9s linear infinite"></span>
+            <img src="uploads/sidecodelogo-removebg-preview.png" alt="" style="width:30px;height:30px;object-fit:contain;animation:sc-bob 3.4s ease-in-out infinite">
+          </div>
+          <div style="font-weight:800;font-size:17px;margin-bottom:5px">Coordinator</div>
+          <div style="font-size:13.5px;color:var(--tx2);line-height:1.5">Reconciles the two reports &mdash; merges duplicates, settles severity conflicts, ranks by impact.</div>
+        </div>
+        <div style="padding:18px 20px;border:1px solid var(--line);border-radius:16px;background:var(--elev);display:flex;align-items:center;gap:12px">
+          <span style="width:11px;height:11px;border-radius:50%;background:var(--safe);box-shadow:0 0 12px var(--safe);flex:none;animation:sc-glow 2.2s infinite"></span>
+          <div><div style="font-weight:800;font-size:15px;letter-spacing:.02em">SAFE TO MERGE / BLOCKED</div><div style="font-size:12.5px;color:var(--tx3)">one decisive gate</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" style="position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:110px 32px 40px">
+    <div data-reveal style="margin-bottom:56px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--in);margin-bottom:16px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--in);box-shadow:0 0 8px var(--in);animation:sc-glow 2s infinite"></span>WHAT YOU GET BACK</div>
+      <h2 class="h2-big" style="font-size:44px;font-weight:800;letter-spacing:-.03em;margin:0;line-height:1.05;max-width:620px">A report you can act on, not a wall of warnings.</h2>
+    </div>
+    <div class="feat-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+      <div data-reveal class="feat feat-wide" style="grid-column:span 2;padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s;overflow:hidden;position:relative">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--in);margin-bottom:18px">CONSENSUS &amp; DISAGREEMENT</div>
+        <h3 style="font-size:22px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">See where the agents agree &mdash; and where they don&rsquo;t.</h3>
+        <p style="color:var(--tx2);font-size:15px;line-height:1.55;margin:0 0 20px;max-width:460px">When both agents flag the same line, you know it&rsquo;s real. When they disagree on severity, the coordinator shows its reasoning instead of hiding it.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:7px 12px;border-radius:8px;background:rgba(242,109,120,.1);border:1px solid rgba(242,109,120,.25);color:#f58b94"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>security</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:7px 12px;border-radius:8px;background:rgba(232,163,61,.1);border:1px solid rgba(232,163,61,.25);color:var(--bug)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-9"></path><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"></path><path d="m8 2 1.88 1.88"></path><path d="M14.12 3.88 16 2"></path></svg>bug</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12.5px;padding:7px 12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--tx3)">both flagged</span>
+        </div>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--in);margin-bottom:18px">CONFIDENCE</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">A score on every finding.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0 0 18px">Each issue carries a calibrated confidence so you can triage signal from noise instantly.</p>
+        <div style="display:flex;align-items:baseline;gap:4px"><span style="font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:700;color:var(--in)">0.97</span><span style="color:var(--tx3);font-size:13px">confidence</span></div>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--in);margin-bottom:18px">SEVERITY ORDER</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">Prioritized, not alphabetized.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0 0 16px">Critical blockers float to the top; nits sink. Fix what matters first.</p>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:54px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sec)">CRIT</span><div style="flex:1;height:6px;border-radius:3px;background:var(--sec);max-width:100%"></div></div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:54px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--bug)">HIGH</span><div style="flex:1;height:6px;border-radius:3px;background:var(--bug);max-width:62%"></div></div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:54px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--warn)">LOW</span><div style="flex:1;height:6px;border-radius:3px;background:var(--warn);max-width:30%"></div></div>
+        </div>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--in);margin-bottom:18px">ON THE GRAPH</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">Findings land on the node.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0">Issues surface right on the file in the graph and post as inline PR comments &mdash; no context-switching.</p>
+      </div>
+      <div data-reveal class="feat" style="padding:26px;border:1px solid var(--line);border-radius:16px;background:var(--surf);transition:transform .3s,border-color .3s,box-shadow .3s">
+        <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--in);margin-bottom:18px">THE GATE</div>
+        <h3 style="font-size:20px;font-weight:700;margin:0 0 10px;letter-spacing:-.02em">Safe to merge, or blocked. No maybes.</h3>
+        <p style="color:var(--tx2);font-size:14.5px;line-height:1.55;margin:0 0 18px">Sidecode sits in your CI/CD as a gate. Green means ship. Red means here&rsquo;s exactly what to fix first.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:11px;background:rgba(78,201,168,.1);border:1px solid rgba(78,201,168,.35)"><span style="width:9px;height:9px;border-radius:50%;background:var(--safe)"></span><span style="font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--safe)">SAFE TO MERGE</span></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:11px;background:rgba(242,109,120,.1);border:1px solid rgba(242,109,120,.3)"><span style="width:9px;height:9px;border-radius:50%;background:var(--sec)"></span><span style="font-weight:700;font-family:'JetBrains Mono',monospace;font-size:13px;color:#f58b94">BLOCKED &middot; 1 CRITICAL</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY GEMINI + VERTEX + ADK -->
+  <section id="why" style="position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:110px 32px 40px">
+    <div class="why-pad" data-reveal style="border:1px solid var(--line);border-radius:22px;background:var(--surf);padding:54px;overflow:hidden;position:relative">
+      <img src="uploads/sidecodelogo-removebg-preview.png" alt="" style="position:absolute;top:-24px;right:-20px;width:190px;height:190px;object-fit:contain;opacity:.05;transform:rotate(6deg);pointer-events:none">
+      <div style="max-width:660px;position:relative">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.18em;color:var(--in);margin-bottom:18px;display:inline-flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:var(--in);box-shadow:0 0 8px var(--in);animation:sc-glow 2s infinite"></span>BUILT ON GOOGLE&rsquo;S AI STACK</div>
+        <h2 class="h2-big" style="font-size:40px;font-weight:800;letter-spacing:-.03em;margin:0 0 18px;line-height:1.08">Why Gemini + Vertex + ADK.</h2>
+        <p style="font-size:17px;color:var(--tx2);line-height:1.6;margin:0">A single model guesses. A coordinated panel deliberates. Sidecode runs its reasoning on Gemini, serves and tunes it on Vertex AI, and orchestrates the panel with Google&rsquo;s ADK &mdash; parallel agents, a coordinator, and live progress on every push.</p>
+      </div>
+      <div class="stack-grid" style="position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px">
+        <div class="stackcard" style="padding:26px 24px;border:1px solid var(--line);border-radius:15px;background:var(--elev);transition:transform .3s,border-color .3s,box-shadow .3s">
+          <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <span style="position:absolute;inset:0;border-radius:12px;background:rgba(92,138,240,.1);border:1px solid rgba(92,138,240,.25)"></span>
+            <span style="position:relative;width:20px;height:20px;background:var(--in);border-radius:5px;transform:rotate(45deg);animation:sc-bob 3s ease-in-out infinite"></span>
+          </div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:7px">Gemini &mdash; the engine</div><div style="color:var(--tx2);font-size:14px;line-height:1.5">Long-context reasoning that understands the whole change, not just the line.</div>
+        </div>
+        <div class="stackcard" style="padding:26px 24px;border:1px solid var(--line);border-radius:15px;background:var(--elev);transition:transform .3s,border-color .3s,box-shadow .3s">
+          <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <span style="position:absolute;inset:0;border-radius:12px;background:rgba(92,138,240,.1);border:1px solid rgba(92,138,240,.25)"></span>
+            <span style="position:relative;width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:21px solid var(--in);animation:sc-bob 3.4s ease-in-out infinite .3s"></span>
+          </div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:7px">Vertex AI &mdash; served &amp; tuned</div><div style="color:var(--tx2);font-size:14px;line-height:1.5">Hosts and tunes the models at every-PR scale with the governance teams require.</div>
+        </div>
+        <div class="stackcard" style="padding:26px 24px;border:1px solid var(--line);border-radius:15px;background:var(--elev);transition:transform .3s,border-color .3s,box-shadow .3s">
+          <div style="position:relative;width:46px;height:46px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+            <span style="position:absolute;inset:0;border-radius:12px;background:rgba(92,138,240,.1);border:1px solid rgba(92,138,240,.25)"></span>
+            <span style="position:absolute;inset:-5px;border-radius:50%;border:1px dashed rgba(92,138,240,.4);animation:sc-orbit 8s linear infinite"></span>
+            <span style="position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:var(--in)"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--in);opacity:.55"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--in);opacity:.55"></span><span style="width:8px;height:8px;border-radius:50%;background:var(--in)"></span></span>
+          </div>
+          <div style="font-weight:800;font-size:18px;margin-bottom:7px">ADK &mdash; orchestration</div><div style="color:var(--tx2);font-size:14px;line-height:1.5">Runs the two specialists and the coordinator as one reliable workflow with live progress.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="position:relative;z-index:2;max-width:1200px;margin:80px auto 0;padding:40px 32px 56px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="uploads/sidecodelogo-removebg-preview.png" alt="Sidecode" style="width:34px;height:34px;object-fit:contain">
+      <div>
+        <div style="font-weight:800;font-size:18px;letter-spacing:-.025em;line-height:1.1">Sidecode</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--tx3);margin-top:2px">a live code companion</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:26px;flex-wrap:wrap">
+      <a href="#live" style="text-decoration:none;color:var(--tx2);font-size:14px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">Live companion</a>
+      <a href="#how" style="text-decoration:none;color:var(--tx2);font-size:14px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">How it works</a>
+      <a href="#features" style="text-decoration:none;color:var(--tx2);font-size:14px;font-weight:500;transition:color .2s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--tx2)'">Features</a>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--tx3)">review that rides along as you ship</span>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:1100}}">
+class Component extends DCLogic {
+  renderVals() {
+    const r = (k) => (el) => { this['_' + k] = el; };
+    return {
+      setRoot: r('root'), setCanvas: r('canvas'), setNav: r('nav'),
+      setTilt: r('tilt'), setTiltInner: r('tiltInner'),
+      setStatus: r('status'), setStatusDot: r('statusDot'), setStatusTxt: r('statusTxt'),
+      setSecBar: r('secBar'), setBugBar: r('bugBar'),
+      setSecCount: r('secCount'), setBugCount: r('bugCount'),
+      setBeam: r('beam'), setLine5: r('line5'), setLine6: r('line6'),
+      setFindings: r('findings'), setVerdict: r('verdict'), setVerdictIcon: r('verdictIcon'),
+      setVerdictSpin: r('verdictSpin'), setVerdictTitle: r('verdictTitle'),
+      setVerdictSub: r('verdictSub'), setVerdictTag: r('verdictTag'),
+      setGraph: r('graph'), setGStatus: r('gstatus'), setGStatusDot: r('gstatusDot'),
+      setGStatusTxt: r('gstatusTxt'), setGTarget: r('gtarget'), setGBadge: r('gbadge'),
+      setGPush: r('gpush'), setGPR: r('gpr'), setGLog: r('glog'), setGLogDot: r('glogDot')
+    };
+  }
+
+  componentDidMount() {
+    this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this._raf = [];
+    this._revealEls = [];
+    this._counterEls = [];
+    this.setupReveal();
+    this.setupCounters();
+    this.setupCardHovers();
+    this.setupMagnetic();
+    this.setupTilt();
+    this.setupCanvas();
+    this.setupNav();
+    this.setupScan();
+    this.setupGraph();
+    this._tick = () => this.onScrollTick();
+    window.addEventListener('scroll', this._tick, { passive: true });
+    window.addEventListener('resize', this._tick, { passive: true });
+    [0, 120, 400, 900].forEach((d) => setTimeout(this._tick, d));
+  }
+
+  onScrollTick() {
+    const vh = window.innerHeight;
+    this._revealEls = this._revealEls.filter((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.92 && r.bottom > 0) { el.style.opacity = '1'; el.style.transform = 'none'; return false; }
+      return true;
+    });
+    this._counterEls = this._counterEls.filter((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.85 && r.bottom > 0) { this.runCounter(el); return false; }
+      return true;
+    });
+    if (!this._started && this._tilt) {
+      const r = this._tilt.getBoundingClientRect();
+      if (r.top < vh * 0.7 && r.bottom > 0) { this._started = true; this.runScanCycle(); }
+    }
+    if (!this._gStarted && this._graph) {
+      const r = this._graph.getBoundingClientRect();
+      if (r.top < vh * 0.75 && r.bottom > 0) { this._gStarted = true; this.runGraphCycle(); }
+    }
+  }
+
+  componentWillUnmount() {
+    (this._raf || []).forEach((id) => cancelAnimationFrame(id));
+    if (this._scanTimer) clearTimeout(this._scanTimer);
+    if (this._graphTimer) clearTimeout(this._graphTimer);
+    if (this._tick) { window.removeEventListener('scroll', this._tick); window.removeEventListener('resize', this._tick); }
+    if (this._onScroll) window.removeEventListener('scroll', this._onScroll);
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+  }
+
+  q(sel) { return this._root ? Array.from(this._root.querySelectorAll(sel)) : []; }
+
+  setupReveal() {
+    const els = this.q('[data-reveal]');
+    els.forEach((el) => {
+      const d = parseInt(el.getAttribute('data-reveal-delay') || '0', 10);
+      el.style.transition = 'opacity .7s cubic-bezier(.22,.61,.36,1) ' + d + 'ms, transform .7s cubic-bezier(.22,.61,.36,1) ' + d + 'ms';
+      if (this.reduced) { el.style.opacity = '1'; el.style.transform = 'none'; return; }
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(28px)';
+    });
+    if (this.reduced) return;
+    this._revealEls = els.slice();
+  }
+
+  setupNav() {
+    const nav = this._nav;
+    if (!nav) return;
+    this._onScroll = () => {
+      if (window.scrollY > 24) {
+        nav.style.background = 'rgba(30,30,30,.82)';
+        nav.style.backdropFilter = 'blur(14px)';
+        nav.style.webkitBackdropFilter = 'blur(14px)';
+        nav.style.borderBottomColor = '#3C3C3C';
+        nav.style.padding = '13px 32px';
+      } else {
+        nav.style.background = 'transparent';
+        nav.style.backdropFilter = 'none';
+        nav.style.webkitBackdropFilter = 'none';
+        nav.style.borderBottomColor = 'transparent';
+        nav.style.padding = '18px 32px';
+      }
+    };
+    window.addEventListener('scroll', this._onScroll, { passive: true });
+    this._onScroll();
+  }
+
+  setupCounters() { this._counterEls = this.q('.counter'); }
+  runCounter(el) {
+    const to = parseFloat(el.getAttribute('data-to'));
+    const pre = el.getAttribute('data-prefix') || '';
+    const suf = el.getAttribute('data-suffix') || '';
+    if (this.reduced) { el.textContent = pre + to + suf; return; }
+    const dur = 1400, start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = pre + Math.round(to * e) + suf;
+      if (p < 1) this._raf.push(requestAnimationFrame(tick));
+    };
+    this._raf.push(requestAnimationFrame(tick));
+  }
+
+  setupCardHovers() {
+    if (this.reduced) return;
+    this.q('.feat, .stackcard').forEach((el) => {
+      el.addEventListener('mouseenter', () => {
+        el.style.transform = 'translateY(-6px)';
+        el.style.borderColor = 'rgba(92,138,240,.5)';
+        el.style.boxShadow = '0 26px 60px -34px rgba(92,138,240,.5)';
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.transform = '';
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      });
+    });
+  }
+
+  setupMagnetic() {
+    if (this.reduced) return;
+    this.q('[data-magnetic]').forEach((el) => {
+      el.addEventListener('mousemove', (ev) => {
+        const r = el.getBoundingClientRect();
+        const x = ev.clientX - r.left - r.width / 2;
+        const y = ev.clientY - r.top - r.height / 2;
+        el.style.transform = 'translate(' + x * 0.22 + 'px,' + y * 0.3 + 'px)';
+      });
+      el.addEventListener('mouseleave', () => { el.style.transform = 'translate(0,0)'; });
+    });
+  }
+
+  setupTilt() {
+    if (this.reduced || !this._tilt) return;
+    const wrap = this._tilt, inner = this._tiltInner;
+    wrap.addEventListener('mousemove', (ev) => {
+      const r = wrap.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width - 0.5;
+      const py = (ev.clientY - r.top) / r.height - 0.5;
+      inner.style.transform = 'rotateY(' + px * 7 + 'deg) rotateX(' + (-py * 7) + 'deg)';
+    });
+    wrap.addEventListener('mouseleave', () => { inner.style.transform = 'rotateY(0deg) rotateX(0deg)'; });
+  }
+
+  setupCanvas() {
+    const cv = this._canvas;
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    let w, h, dpr, pts;
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      cv.width = w * dpr; cv.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const count = Math.min(64, Math.floor((w * h) / 28000));
+      pts = [];
+      for (let i = 0; i < count; i++) {
+        pts.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - 0.5) * 0.2, vy: (Math.random() - 0.5) * 0.2, r: Math.random() * 1.5 + 0.6 });
+      }
+    };
+    resize();
+    this._onResize = resize;
+    window.addEventListener('resize', resize, { passive: true });
+    if (this.reduced) {
+      ctx.fillStyle = 'rgba(92,138,240,.3)';
+      pts.forEach((p) => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); });
+      return;
+    }
+    let scanY = -120;
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > w) p.vx *= -1;
+        if (p.y < 0 || p.y > h) p.vy *= -1;
+        for (let j = i + 1; j < pts.length; j++) {
+          const qq = pts[j];
+          const dx = p.x - qq.x, dy = p.y - qq.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 17000) {
+            const a = (1 - d2 / 17000) * 0.14;
+            ctx.strokeStyle = 'rgba(92,138,240,' + a + ')';
+            ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(qq.x, qq.y); ctx.stroke();
+          }
+        }
+      }
+      for (const p of pts) {
+        const near = Math.abs(p.y - scanY) < 90;
+        ctx.beginPath();
+        ctx.fillStyle = near ? 'rgba(130,168,246,.85)' : 'rgba(92,138,240,.36)';
+        ctx.arc(p.x, p.y, near ? p.r + 0.8 : p.r, 0, 7);
+        ctx.fill();
+      }
+      scanY += 1.4;
+      if (scanY > h + 120) scanY = -120;
+      const grad = ctx.createLinearGradient(0, scanY - 70, 0, scanY + 4);
+      grad.addColorStop(0, 'rgba(92,138,240,0)');
+      grad.addColorStop(1, 'rgba(92,138,240,.04)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, scanY - 70, w, 74);
+      this._raf.push(requestAnimationFrame(draw));
+    };
+    this._raf.push(requestAnimationFrame(draw));
+  }
+
+  /* ===== SCANNER CARD (two agents) ===== */
+
+  setStatusState(txt, color) {
+    this._statusTxt.textContent = txt;
+    this._statusDot.style.background = color;
+    this._statusTxt.style.color = color;
+    this._statusDot.style.boxShadow = '0 0 8px ' + color;
+  }
+
+  findingsHTML() {
+    const rows = [
+      { c: 'var(--sec)', tag: 'SECURITY', sev: 'CRITICAL', sevc: 'var(--sec)', conf: '0.97', votes: '2 of 2', ln: 'L5', t: 'SQL injection via string concatenation', d: 'User input flows into a raw query. Use a parameterized statement.' },
+      { c: 'var(--bug)', tag: 'BUG', sev: 'HIGH', sevc: 'var(--bug)', conf: '0.91', votes: '1 of 2', ln: 'L6', t: 'Missing await on async db.query()', d: 'rows resolves to a Promise; the downstream null-check never sees data.' }
+    ];
+    return rows.map((rr, i) => (
+      '<div style="display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s" data-find="' + i + '">' +
+        '<span style="width:3px;border-radius:2px;background:' + rr.c + ';flex:none"></span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">' +
+            '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;font-weight:700;letter-spacing:.06em;color:' + rr.sevc + '">' + rr.sev + '</span>' +
+            '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3)">' + rr.ln + '</span>' +
+            '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:' + rr.c + '">' + rr.tag + '</span>' +
+            '<span style="margin-left:auto;font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3)">' + rr.votes + ' agents</span>' +
+          '</div>' +
+          '<div style="font-size:13.5px;font-weight:600;color:var(--tx);margin-bottom:2px">' + rr.t + '</div>' +
+          '<div style="font-size:12px;color:var(--tx2);line-height:1.45">' + rr.d + '</div>' +
+          '<div style="margin-top:7px;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden"><div style="height:100%;width:' + (parseFloat(rr.conf) * 100) + '%;background:' + rr.c + ';border-radius:2px"></div></div>' +
+          '<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--tx3);margin-top:4px">confidence ' + rr.conf + '</div>' +
+        '</div>' +
+      '</div>'
+    )).join('');
+  }
+
+  showFindings() {
+    const f = this._findings;
+    if (!f.dataset.built) { f.innerHTML = this.findingsHTML(); f.dataset.built = '1'; }
+  }
+  revealFinding(i) {
+    const el = this._findings.querySelector('[data-find="' + i + '"]');
+    if (el) { el.style.opacity = '1'; el.style.transform = 'none'; }
+  }
+
+  setBlocked() {
+    this._verdictSpin.style.display = 'none';
+    this._verdictIcon.style.background = 'rgba(242,109,120,.14)';
+    this._verdictIcon.style.borderColor = 'rgba(242,109,120,.4)';
+    this._verdictIcon.innerHTML = '<span style="color:#f58b94;font-size:18px;font-weight:800">!</span>';
+    this._verdictTitle.textContent = 'Blocked \u00b7 1 critical, 1 high';
+    this._verdictTitle.style.color = '#f58b94';
+    this._verdictSub.textContent = 'fix L5 before this can merge';
+    this._verdict.style.background = 'rgba(242,109,120,.07)';
+    this._verdictTag.textContent = 'BLOCKED';
+    this._verdictTag.style.background = 'rgba(242,109,120,.14)';
+    this._verdictTag.style.color = '#f58b94';
+    this._verdictTag.style.borderColor = 'rgba(242,109,120,.4)';
+    this.setStatusState('BLOCKED', '#F26D78');
+  }
+
+  setFinal() {
+    this._secBar.style.width = '100%'; this._bugBar.style.width = '100%';
+    this._secCount.textContent = '1'; this._bugCount.textContent = '1';
+    this._line5.style.background = 'rgba(242,109,120,.12)'; this._line5.style.boxShadow = 'inset 3px 0 0 var(--sec)';
+    this._line6.style.background = 'rgba(232,163,61,.12)'; this._line6.style.boxShadow = 'inset 3px 0 0 var(--bug)';
+    this.showFindings();
+    this._findings.querySelectorAll('[data-find]').forEach((el) => { el.style.opacity = '1'; el.style.transform = 'none'; });
+    this.setBlocked();
+  }
+
+  resetScan() {
+    this._beam.style.transition = 'none';
+    this._beam.style.opacity = '0';
+    this._beam.style.top = '0px';
+    [this._secBar, this._bugBar].forEach((b) => { b.style.width = '0%'; });
+    this._secCount.textContent = '0'; this._bugCount.textContent = '0';
+    [this._line5, this._line6].forEach((el) => { el.style.background = 'transparent'; el.style.boxShadow = 'none'; });
+    if (this._findings.dataset.built) {
+      this._findings.querySelectorAll('[data-find]').forEach((el) => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; });
+    }
+    this._verdictSpin.style.display = 'block';
+    this._verdictIcon.style.background = 'rgba(255,255,255,.05)';
+    this._verdictIcon.style.borderColor = 'var(--line)';
+    this._verdictIcon.innerHTML = '<span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--tx3);border-top-color:var(--in);display:block;animation:sc-spin .8s linear infinite"></span>';
+    this._verdictTitle.textContent = 'Coordinator reconciling 2 agents\u2026';
+    this._verdictTitle.style.color = 'var(--tx2)';
+    this._verdictSub.textContent = 'deduping overlaps \u00b7 resolving severity';
+    this._verdict.style.background = '#2D2D30';
+    this._verdictTag.textContent = 'SCANNING';
+    this._verdictTag.style.background = 'rgba(255,255,255,.05)';
+    this._verdictTag.style.color = 'var(--tx3)';
+    this._verdictTag.style.borderColor = 'var(--line)';
+    this.setStatusState('SCANNING', '#5C8AF0');
+  }
+
+  setupScan() {
+    if (this.reduced) { this.setStatusState('BLOCKED', '#F26D78'); this.setFinal(); }
+  }
+
+  runScanCycle() {
+    if (this.reduced) return;
+    this.resetScan();
+    const beam = this._beam;
+    const codeH = beam.parentElement.offsetHeight;
+    setTimeout(() => {
+      beam.style.opacity = '1';
+      beam.style.transition = 'top 3s cubic-bezier(.45,.05,.3,1)';
+      beam.style.top = (codeH - 30) + 'px';
+    }, 350);
+
+    const fill = (bar, to, delay) => setTimeout(() => { bar.style.width = to + '%'; }, delay);
+    fill(this._secBar, 45, 700); fill(this._secBar, 100, 2600);
+    fill(this._bugBar, 30, 1000); fill(this._bugBar, 100, 2900);
+
+    this._scanT = [];
+    const hit = (el, color, glow, delay) => this._scanT.push(setTimeout(() => {
+      el.style.background = glow; el.style.boxShadow = 'inset 3px 0 0 ' + color;
+    }, delay));
+    hit(this._line5, 'var(--sec)', 'rgba(242,109,120,.12)', 1450);
+    hit(this._line6, 'var(--bug)', 'rgba(232,163,61,.12)', 2100);
+
+    this._scanT.push(setTimeout(() => { this._secCount.textContent = '1'; }, 1500));
+    this._scanT.push(setTimeout(() => { this._bugCount.textContent = '1'; }, 2150));
+
+    this._scanT.push(setTimeout(() => { beam.style.opacity = '0'; }, 3400));
+    this._scanT.push(setTimeout(() => { this.showFindings(); }, 3500));
+    this._scanT.push(setTimeout(() => { this.revealFinding(0); }, 3650));
+    this._scanT.push(setTimeout(() => { this.revealFinding(1); }, 3900));
+    this._scanT.push(setTimeout(() => { this.setBlocked(); }, 4400));
+
+    this._scanTimer = setTimeout(() => { this.runScanCycle(); }, 9500);
+  }
+
+  /* ===== LIVE COMPANION GRAPH ===== */
+
+  setGState(txt, color) {
+    if (!this._gstatusTxt) return;
+    this._gstatusTxt.textContent = txt;
+    this._gstatusDot.style.background = color;
+    this._gstatusDot.style.boxShadow = '0 0 8px ' + color;
+  }
+  setGEvent(txt, color) {
+    if (!this._glog) return;
+    this._glog.textContent = txt;
+    this._glogDot.style.background = color;
+    this._glogDot.style.boxShadow = '0 0 8px ' + color;
+  }
+
+  setupGraph() {
+    if (!this._graph) return;
+    this._gedges = Array.from(this._graph.querySelectorAll('.gedge'));
+    this._gedges.forEach((line) => {
+      let len = 0;
+      try { len = line.getTotalLength(); } catch (e) { len = 0; }
+      if (len) {
+        line.style.strokeDasharray = len;
+        line.style.strokeDashoffset = len;
+        line.style.transition = 'stroke-dashoffset .9s ease, stroke .4s';
+      }
+    });
+    this._gnodes = Array.from(this._graph.querySelectorAll('.gnode'));
+    this._gnodes.forEach((n) => { n.style.opacity = '0'; n.style.transform = 'scale(.72)'; });
+    if (this.reduced) { this.graphFinal(); }
+  }
+
+  graphReset() {
+    this._gedges.forEach((line) => {
+      const len = line.style.strokeDasharray;
+      line.style.transition = 'none';
+      line.style.strokeDashoffset = len;
+      line.style.stroke = '#3C3C3C';
+    });
+    // force reflow then re-enable transition
+    void this._graph.offsetHeight;
+    this._gedges.forEach((line) => { line.style.transition = 'stroke-dashoffset .9s ease, stroke .4s'; });
+    this._gnodes.forEach((n) => { n.style.opacity = '0'; n.style.transform = 'scale(.72)'; });
+    if (this._gtarget) {
+      this._gtarget.style.borderColor = 'var(--line)';
+      this._gtarget.style.background = 'var(--elev)';
+      this._gtarget.style.boxShadow = 'none';
+      this._gtarget.style.color = 'var(--tx)';
+      this._gtarget.style.animation = 'none';
+    }
+    if (this._gbadge) { this._gbadge.style.opacity = '0'; this._gbadge.style.transform = 'scale(.6)'; }
+    if (this._gpush) { this._gpush.style.opacity = '0'; this._gpush.style.transform = 'translateX(-50%) translateY(-6px)'; }
+    if (this._gpr) { this._gpr.style.opacity = '0'; this._gpr.style.transform = 'translateX(-50%) translateY(8px)'; }
+    this.setGState('IDLE', '#6E6E6E');
+    this.setGEvent('connect a repository to begin', '#6E6E6E');
+  }
+
+  graphFinal() {
+    this._gnodes.forEach((n) => { n.style.opacity = '1'; n.style.transform = 'scale(1)'; });
+    this._gedges.forEach((line) => { line.style.strokeDashoffset = '0'; });
+    if (this._gtarget) { this._gtarget.style.borderColor = 'var(--safe)'; this._gtarget.style.background = 'rgba(78,201,168,.12)'; }
+    if (this._gpr) { this._gpr.style.opacity = '1'; this._gpr.style.transform = 'translateX(-50%) translateY(0)'; }
+    this.setGState('SAFE TO MERGE', '#4EC9A8');
+    this.setGEvent('PR #482 opened \u00b7 api/users.ts \u00b7 safe to merge', '#4EC9A8');
+  }
+
+  runGraphCycle() {
+    if (this.reduced) return;
+    this.graphReset();
+    const T = this._graphT = [];
+    const push = (fn, d) => T.push(setTimeout(fn, d));
+
+    // phase 1: connect + build graph
+    push(() => { this.setGState('CONNECTED', '#5C8AF0'); this.setGEvent('repository connected \u00b7 building graph', '#5C8AF0'); }, 250);
+    this._gnodes.forEach((n, i) => push(() => { n.style.opacity = '1'; n.style.transform = 'scale(1)'; }, 500 + i * 130));
+    push(() => { this._gedges.forEach((line) => { line.style.strokeDashoffset = '0'; }); }, 700);
+
+    // phase 2: push
+    push(() => {
+      this._gpush.style.opacity = '1';
+      this._gpush.style.transform = 'translateX(-50%) translateY(0)';
+      this.setGState('SCANNING', '#5C8AF0');
+      this.setGEvent('push 3f9a2c1 \u00b7 re-scanning api/users.ts', '#5C8AF0');
+    }, 2400);
+    push(() => {
+      if (this._gtarget) {
+        this._gtarget.style.borderColor = 'var(--bug)';
+        this._gtarget.style.boxShadow = '0 0 0 4px rgba(232,163,61,.12)';
+        if (!this.reduced) this._gtarget.style.animation = 'sc-pulse 1.4s ease-out infinite';
+      }
+    }, 2700);
+
+    // phase 3: finding
+    push(() => {
+      if (this._gtarget) {
+        this._gtarget.style.animation = 'none';
+        this._gtarget.style.borderColor = 'var(--sec)';
+        this._gtarget.style.background = 'rgba(242,109,120,.12)';
+        this._gtarget.style.boxShadow = '0 0 22px -4px rgba(242,109,120,.5)';
+      }
+      if (this._gbadge) { this._gbadge.style.background = 'var(--sec)'; this._gbadge.style.opacity = '1'; this._gbadge.style.transform = 'scale(1)'; }
+      this.setGState('BLOCKED', '#F26D78');
+      this.setGEvent('1 finding on api/users.ts \u00b7 SQL injection (L5)', '#F26D78');
+    }, 4400);
+
+    // phase 4: fix -> green
+    push(() => {
+      if (this._gbadge) { this._gbadge.textContent = 'FIXED'; this._gbadge.style.background = 'var(--safe)'; }
+      if (this._gtarget) {
+        this._gtarget.style.borderColor = 'var(--safe)';
+        this._gtarget.style.background = 'rgba(78,201,168,.14)';
+        this._gtarget.style.boxShadow = '0 0 22px -4px rgba(78,201,168,.5)';
+      }
+      this.setGEvent('fix drafted \u00b7 parameterized query', '#4EC9A8');
+    }, 6300);
+    push(() => {
+      this._gpr.style.opacity = '1';
+      this._gpr.style.transform = 'translateX(-50%) translateY(0)';
+      if (this._gtarget) this._gtarget.style.boxShadow = '0 0 18px -6px rgba(78,201,168,.45)';
+      this.setGState('SAFE TO MERGE', '#4EC9A8');
+      this.setGEvent('PR #482 opened \u00b7 api/users.ts \u00b7 safe to merge', '#4EC9A8');
+    }, 7100);
+
+    // loop
+    this._graphTimer = setTimeout(() => { this.runGraphCycle(); }, 11500);
+  }
+}
+</script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import type {
   LinkObject,
 } from 'react-force-graph-2d';
 import { PALETTE, LENS_COLOR, type RFNode, type RFLink } from './graph-model';
+import { fileTypeMeta } from '@/lib/file-icons';
 import type { AgentName } from '@/lib/types';
 
 type GraphProps = ForceGraphProps<RFNode, RFLink> & {
@@ -27,6 +28,8 @@ export interface ReviewGraphProps {
   selectedId: string | null;
   activeAgents: Set<AgentName>;
   searchQuery: string;
+  /** When set, the graph is filtered to this folder's subtree (drill-in). */
+  focusFolder: string | null;
   reducedMotion: boolean;
   scanning: boolean;
   onHover: (id: string | null) => void;
@@ -34,12 +37,13 @@ export interface ReviewGraphProps {
 }
 
 export default function ReviewGraph({
-  graphData,
+  graphData: rawGraphData,
   paintVersion,
   hoveredId,
   selectedId,
   activeAgents,
   searchQuery,
+  focusFolder,
   reducedMotion,
   scanning,
   onHover,
@@ -95,6 +99,31 @@ export default function ReviewGraph({
     }
   }, [Graph]);
 
+  // Drill-in: filter to the focused folder's subtree (its files + descendant
+  // folder hubs + the hub chain back to root for context). When no folder is
+  // focused, the full graph is shown.
+  const graphData = useMemo(() => {
+    if (!focusFolder) return rawGraphData;
+    const prefix = `${focusFolder}/`;
+    const keepIds = new Set<string>(['root', `dir:${focusFolder}`]);
+    // Ancestor folder hubs for breadcrumb context.
+    const parts = focusFolder.split('/');
+    let acc = '';
+    for (const p of parts) {
+      acc = acc ? `${acc}/${p}` : p;
+      keepIds.add(`dir:${acc}`);
+    }
+    for (const n of rawGraphData.nodes) {
+      if (n.kind === 'file' && (n.path === focusFolder || n.path.startsWith(prefix))) keepIds.add(n.id);
+      if (n.kind === 'folder' && (n.path === focusFolder || n.path.startsWith(prefix))) keepIds.add(n.id);
+    }
+    const nodes = rawGraphData.nodes.filter((n) => keepIds.has(n.id));
+    const links = rawGraphData.links.filter(
+      (l) => keepIds.has(linkEndId(l.source)) && keepIds.has(linkEndId(l.target)),
+    );
+    return { nodes, links };
+  }, [rawGraphData, focusFolder]);
+
   // Adjacency for hover highlighting.
   const adjacency = useMemo(() => {
     const map = new Map<string, Set<string>>();
@@ -125,6 +154,18 @@ export default function ReviewGraph({
     fgRef.current?.d3ReheatSimulation();
   }, [paintVersion, selectedId, query, activeAgents]);
 
+  // On drill-in / drill-out, refit the camera to the (now different) node set.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg) return;
+    userMoved.current = false;
+    fg.d3ReheatSimulation();
+    const t = setTimeout(() => {
+      if (!userMoved.current) fg.zoomToFit(reducedMotion ? 0 : 500, 120);
+    }, reducedMotion ? 0 : 350);
+    return () => clearTimeout(t);
+  }, [focusFolder, reducedMotion]);
+
   // Gentle auto-fit while building, unless the user has taken control.
   useEffect(() => {
     if (userMoved.current) return;
@@ -135,6 +176,18 @@ export default function ReviewGraph({
     lastFit.current = now;
     fg.zoomToFit(reducedMotion ? 0 : 600, 120);
   }, [graphData, reducedMotion]);
+
+  // Fly the camera to the selected node (covers selecting a search result or a
+  // sidebar file): center on it and zoom in a touch.
+  useEffect(() => {
+    const fg = fgRef.current;
+    if (!fg || !selectedId) return;
+    const node = graphData.nodes.find((n) => n.id === selectedId);
+    if (!node || node.x == null || node.y == null) return;
+    const ms = reducedMotion ? 0 : 700;
+    fg.centerAt(node.x, node.y, ms);
+    fg.zoom(Math.max(2.4, node.radius * 0.4 + 2), ms);
+  }, [selectedId, graphData, reducedMotion]);
 
   function isDim(node: RFNode): boolean {
     if (hoverSet && !hoverSet.has(node.id)) return true;
@@ -175,19 +228,20 @@ export default function ReviewGraph({
     if (node.kind === 'root') {
       ctx.beginPath();
       ctx.arc(x, y, node.radius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(131,200,24,0.18)';
+      ctx.fillStyle = 'rgba(92,138,240,0.18)';
       ctx.fill();
       ctx.lineWidth = 1.4 / scale;
-      ctx.strokeStyle = PALETTE.lime;
+      ctx.strokeStyle = PALETTE.in;
       ctx.stroke();
-      drawLabel(node.label, PALETTE.lime, 12); // repo name always shown
+      drawLabel(node.label, PALETTE.in, 12); // repo name always shown
       ctx.globalAlpha = 1;
       return;
     }
     if (node.kind === 'folder') {
+      // Folder hub: a small neutral node that forms the web.
       ctx.beginPath();
       ctx.arc(x, y, node.radius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(163,163,168,0.30)';
+      ctx.fillStyle = 'rgba(157,157,157,0.30)';
       ctx.fill();
       // Folder names appear once mildly zoomed (or hovered/selected) to avoid clutter.
       if ((scale > 1 || node.id === hoveredId || node.id === selectedId) && !dim) {
@@ -197,22 +251,35 @@ export default function ReviewGraph({
       return;
     }
 
-    // File node.
+    // ── File node ────────────────────────────────────────────────────
+    // The center always shows the STANDARD file-type icon (the language
+    // short-code in its type color). Findings are shown only as the RING
+    // color + corner badge; a clean, fully-scanned file washes to green.
     const badge = activeBadge(node);
-    const ringColor = badge ? LENS_COLOR[badge.agent] : 'rgba(131,200,24,0.45)';
+    const clean =
+      !badge && node.verdict === 'safe' && node.findingCount === 0;
+    const ringColor = badge
+      ? LENS_COLOR[badge.agent]
+      : clean
+        ? PALETTE.safe
+        : 'rgba(92,138,240,0.45)';
 
     // Glow.
     if (!dim) {
-      ctx.shadowColor = badge ? ringColor : 'rgba(131,200,24,0.55)';
-      ctx.shadowBlur = (badge ? 16 : 8) / 1;
+      ctx.shadowColor = badge
+        ? ringColor
+        : clean
+          ? 'rgba(78,201,168,0.55)'
+          : 'rgba(92,138,240,0.55)';
+      ctx.shadowBlur = badge ? 16 : 8;
     }
     ctx.beginPath();
     ctx.arc(x, y, node.radius, 0, Math.PI * 2);
-    ctx.fillStyle = badge ? 'rgba(40,40,45,0.96)' : 'rgba(40,40,45,0.9)';
+    ctx.fillStyle = badge ? 'rgba(45,45,48,0.97)' : 'rgba(45,45,48,0.92)';
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Ring.
+    // Ring (worst-severity / lens color; green when clear).
     ctx.lineWidth = (badge ? 2 : 1) / scale;
     ctx.strokeStyle = ringColor;
     ctx.stroke();
@@ -222,10 +289,23 @@ export default function ReviewGraph({
       ctx.beginPath();
       ctx.arc(x, y, node.radius + 4 / scale, 0, Math.PI * 2);
       ctx.lineWidth = 1.5 / scale;
-      ctx.strokeStyle = PALETTE.limeBright;
+      ctx.strokeStyle = PALETTE.inBright;
       ctx.setLineDash([3 / scale, 3 / scale]);
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // File-type icon centered on the circle (standard type short-code).
+    if (!dim) {
+      const meta = fileTypeMeta(node.path);
+      const glyph = meta.label.length > 4 ? meta.label.slice(0, 4) : meta.label;
+      const maxByWidth = (node.radius * 1.5) / Math.max(1, glyph.length * 0.62);
+      const glyphSize = Math.min(node.radius * 0.95, maxByWidth);
+      ctx.font = `700 ${glyphSize}px ${getMono()}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = meta.color;
+      ctx.fillText(glyph, x, y + 0.5 / scale);
     }
 
     // Finding badge (color = worst active lens, with count).
@@ -249,12 +329,11 @@ export default function ReviewGraph({
       ctx.font = `700 ${br * 1.15}px ${getMono()}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = badge.agent === 'correctness' ? '#15150f' : '#15150f';
+      ctx.fillStyle = '#1e1e1e';
       ctx.fillText(label, bx, by + 0.5 / scale);
     }
 
-    // File names show at the default zoom now (was only when deeply zoomed in),
-    // so every file in the web reads as a name. Always shown when hovered/selected.
+    // File names show below the node at default zoom; always when active.
     const showLabel = scale > 0.5 || node.id === hoveredId || node.id === selectedId;
     if (showLabel && !dim) {
       drawLabel(node.label, PALETTE.tx, 11);
@@ -276,10 +355,10 @@ export default function ReviewGraph({
     if (hoveredId) {
       const s = linkEndId(link.source);
       const t = linkEndId(link.target);
-      if (s === hoveredId || t === hoveredId) return 'rgba(131,200,24,0.5)';
+      if (s === hoveredId || t === hoveredId) return 'rgba(130,168,246,0.6)';
       return 'rgba(255,255,255,0.04)';
     }
-    return 'rgba(255,255,255,0.09)';
+    return 'rgba(255,255,255,0.08)';
   }
 
   return (
@@ -290,7 +369,7 @@ export default function ReviewGraph({
           graphData={graphData}
           width={size.w}
           height={size.h}
-          backgroundColor="#1d1d20"
+          backgroundColor="#1e1e1e"
           nodeRelSize={1}
           nodeCanvasObject={paintNode}
           nodePointerAreaPaint={paintPointerArea}

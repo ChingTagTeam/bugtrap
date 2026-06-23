@@ -105,12 +105,10 @@ export default function PageInteractions() {
             const x = ev.clientX - r.left - r.width / 2;
             const y = ev.clientY - r.top - r.height / 2;
             el.style.transform =
-              "translate(" + x * 0.25 + "px," + y * 0.35 + "px)";
-            el.style.boxShadow = "0 10px 40px rgba(131,200,24,.45)";
+              "translate(" + x * 0.22 + "px," + y * 0.3 + "px)";
           };
           const onLeave = () => {
             el.style.transform = "translate(0,0)";
-            el.style.boxShadow = "";
           };
           el.addEventListener("mousemove", onMove);
           el.addEventListener("mouseleave", onLeave);

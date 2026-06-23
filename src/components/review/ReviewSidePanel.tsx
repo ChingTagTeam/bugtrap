@@ -1,19 +1,21 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ShieldAlert, Bug, Eye, Search, PanelLeftClose, PanelLeftOpen, FolderTree, ListTree } from 'lucide-react';
+import { ShieldAlert, Bug, Search, PanelLeftClose, PanelLeftOpen, FolderTree, ListTree } from 'lucide-react';
 import type { AgentName } from '@/lib/types';
 import type { ScanFinding, LensCounts } from '@/lib/scan-types';
-import { LENS_COLOR, LENS_LABEL, SEVERITY_COLOR, severityRank, type RFNode } from './graph-model';
+import { LENS_COLOR, SEVERITY_COLOR, severityRank, type RFNode } from './graph-model';
 import FileTree from './FileTree';
 
 const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace";
 
-const LENS_ICONS: Record<AgentName, typeof ShieldAlert> = {
-  security: ShieldAlert,
-  correctness: Bug,
-  readability: Eye,
-};
+/* The two Sidecode display lenses. The Bug lens covers the backend
+ * correctness + readability agents (presentation-only remap). */
+type DisplayLens = { key: 'security' | 'bug'; label: string; icon: typeof ShieldAlert; agents: AgentName[]; color: string };
+const DISPLAY_LENSES: DisplayLens[] = [
+  { key: 'security', label: 'Security', icon: ShieldAlert, agents: ['security'], color: LENS_COLOR.security },
+  { key: 'bug', label: 'Bug', icon: Bug, agents: ['correctness', 'readability'], color: LENS_COLOR.correctness },
+];
 
 const SEVERITY_ORDER = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'] as const;
 
@@ -29,6 +31,7 @@ export default function ReviewSidePanel({
   searchQuery,
   onSearch,
   onOpenFinding,
+  onDrillFolder,
   collapsed,
   onToggleCollapsed,
 }: {
@@ -41,6 +44,7 @@ export default function ReviewSidePanel({
   searchQuery: string;
   onSearch: (q: string) => void;
   onOpenFinding: (f: ScanFinding) => void;
+  onDrillFolder: (path: string) => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
@@ -53,6 +57,18 @@ export default function ReviewSidePanel({
     for (const f of findings) c[f.agent] += 1;
     return c;
   }, [findings]);
+
+  // Counts collapsed to the two display lenses.
+  const displayCount = (l: DisplayLens): number =>
+    l.agents.reduce((sum, a) => sum + lensCounts[a], 0);
+  const lensActive = (l: DisplayLens): boolean => l.agents.some((a) => activeAgents.has(a));
+  const toggleLens = (l: DisplayLens): void => {
+    // Flip every backend agent the lens maps to, together.
+    const turnOff = lensActive(l);
+    for (const a of l.agents) {
+      if (turnOff === activeAgents.has(a)) onToggleAgent(a);
+    }
+  };
 
   const visible = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -80,7 +96,7 @@ export default function ReviewSidePanel({
           width: 48,
           flex: 'none',
           borderRight: '1px solid var(--line)',
-          background: 'rgba(37,37,41,.6)',
+          background: 'rgba(45,45,48,.6)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -114,7 +130,7 @@ export default function ReviewSidePanel({
         width: 332,
         flex: 'none',
         borderRight: '1px solid var(--line)',
-        background: 'rgba(37,37,41,.55)',
+        background: 'rgba(45,45,48,.55)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
@@ -139,14 +155,14 @@ export default function ReviewSidePanel({
         {tab === 'findings' && (
           <div style={{ paddingBottom: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {(['security', 'correctness', 'readability'] as AgentName[]).map((a) => {
-                const Icon = LENS_ICONS[a];
-                const active = activeAgents.has(a);
-                const color = LENS_COLOR[a];
+              {DISPLAY_LENSES.map((l) => {
+                const Icon = l.icon;
+                const active = lensActive(l);
+                const color = l.color;
                 return (
                   <button
-                    key={a}
-                    onClick={() => onToggleAgent(a)}
+                    key={l.key}
+                    onClick={() => toggleLens(l)}
                     aria-pressed={active}
                     style={{
                       display: 'flex',
@@ -165,8 +181,8 @@ export default function ReviewSidePanel({
                     <span style={{ color, display: 'inline-flex' }}>
                       <Icon size={15} />
                     </span>
-                    <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{LENS_LABEL[a]}</span>
-                    <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--tx2)' }}>{lensCounts[a]}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{l.label}</span>
+                    <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--tx2)' }}>{displayCount(l)}</span>
                   </button>
                 );
               })}
@@ -201,7 +217,7 @@ export default function ReviewSidePanel({
       {/* Body */}
       <div className="bt-scroll" style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'files' ? (
-          <FileTree nodes={nodes} selectedPath={selectedPath} onSelect={onSelectFile} />
+          <FileTree nodes={nodes} selectedPath={selectedPath} onSelect={onSelectFile} onDrillFolder={onDrillFolder} />
         ) : visible.length === 0 ? (
           <div style={{ padding: '40px 12px', textAlign: 'center', color: 'var(--tx3)', fontFamily: mono, fontSize: 12.5, lineHeight: 1.6 }}>
             {findings.length === 0 ? 'No findings yet.' : 'Nothing matches the current filters.'}
@@ -269,7 +285,7 @@ function TabBtn({
         padding: '7px 11px',
         borderRadius: 9,
         border: `1px solid ${active ? 'var(--lime)' : 'var(--line2)'}`,
-        background: active ? 'rgba(131,200,24,.14)' : 'transparent',
+        background: active ? 'rgba(92,138,240,.14)' : 'transparent',
         color: active ? 'var(--tx)' : 'var(--tx3)',
         cursor: 'pointer',
         fontSize: 12.5,
@@ -331,10 +347,10 @@ function FindingRow({ finding, onClick }: { finding: ScanFinding; onClick: () =>
 function Legend() {
   return (
     <div style={{ padding: '10px 16px', borderTop: '1px solid var(--line)', display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
-      {(['security', 'correctness', 'readability'] as AgentName[]).map((a) => (
-        <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: mono, fontSize: 10.5, color: 'var(--tx3)' }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: LENS_COLOR[a] }} />
-          {LENS_LABEL[a]}
+      {DISPLAY_LENSES.map((l) => (
+        <span key={l.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: mono, fontSize: 10.5, color: 'var(--tx3)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: l.color }} />
+          {l.label}
         </span>
       ))}
     </div>

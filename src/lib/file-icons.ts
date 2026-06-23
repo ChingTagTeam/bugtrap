@@ -21,8 +21,8 @@ const BY_EXT: Record<string, FileTypeMeta> = {
   html: { label: 'HTML', color: '#e34c26' },
   htm: { label: 'HTML', color: '#e34c26' },
   json: { label: 'JSON', color: '#cbcb41' },
-  md: { label: 'MD', color: '#a3a3a8' },
-  mdx: { label: 'MDX', color: '#a3a3a8' },
+  md: { label: 'MD', color: '#9d9d9d' },
+  mdx: { label: 'MDX', color: '#9d9d9d' },
   py: { label: 'PY', color: '#3572a5' },
   rb: { label: 'RB', color: '#cc342d' },
   go: { label: 'GO', color: '#00add8' },
@@ -47,7 +47,7 @@ const BY_EXT: Record<string, FileTypeMeta> = {
   dart: { label: 'DART', color: '#00b4ab' },
 };
 
-const DEFAULT_META: FileTypeMeta = { label: 'FILE', color: '#6f6f76' };
+const DEFAULT_META: FileTypeMeta = { label: 'FILE', color: '#6e6e6e' };
 
 export function fileTypeMeta(path: string): FileTypeMeta {
   const base = path.slice(path.lastIndexOf('/') + 1);

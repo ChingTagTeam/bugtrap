@@ -13,7 +13,7 @@ function webhookUrl(): string {
 }
 
 /**
- * Register (or update) the BugTrap push webhook on a repo. Idempotent: a hook
+ * Register (or update) the Sidecode push webhook on a repo. Idempotent: a hook
  * whose config.url already matches ours is updated in place, never duplicated.
  * This is the shared core the CLI and the future connect-repo endpoint both call.
  */

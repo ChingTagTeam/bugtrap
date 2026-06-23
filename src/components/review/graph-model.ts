@@ -2,35 +2,46 @@ import { scaleSqrt } from 'd3-scale';
 import type { Severity, AgentName } from '@/lib/types';
 import type { LensCounts, FileVerdict } from '@/lib/scan-types';
 
-/** Literal hex palette — canvas fillStyle can't resolve CSS variables. */
+/** Literal hex palette — canvas fillStyle can't resolve CSS variables.
+ *  Sidecode tokens. Indigo is brand-only; findings use security red / bug
+ *  amber; a clean node washes toward verdict green. */
 export const PALETTE = {
-  bg: '#1d1d20',
-  surf: '#28282d',
-  line: 'rgba(255,255,255,0.10)',
-  lime: '#83c818',
-  limeBright: '#a6f02e',
-  tx: '#f2f2ef',
-  tx2: '#a3a3a8',
-  tx3: '#6f6f76',
-  sec: '#ff5d6c',
-  cor: '#83c818',
-  read: '#54b8ff',
-  high: '#f0b454',
-  folder: 'rgba(163,163,168,0.5)',
+  bg: '#1e1e1e',
+  surf: '#2d2d30',
+  line: '#3c3c3c',
+  in: '#5c8af0',
+  inBright: '#82a8f6',
+  // legacy keys kept for any existing references, repointed to Sidecode
+  lime: '#5c8af0',
+  limeBright: '#82a8f6',
+  tx: '#d4d4d4',
+  tx2: '#9d9d9d',
+  tx3: '#6e6e6e',
+  sec: '#f26d78',
+  bug: '#e8a33d',
+  safe: '#4ec9a8',
+  warn: '#e5c07b',
+  // legacy lens keys fold into the two Sidecode finding colors
+  cor: '#e8a33d',
+  read: '#e8a33d',
+  high: '#e5c07b',
+  folder: 'rgba(157,157,157,0.5)',
 } as const;
 
+/** Each backend lens maps to one of the two Sidecode finding colors:
+ *  security → security red; correctness + readability → bug amber. */
 export const LENS_COLOR: Record<AgentName, string> = {
   security: PALETTE.sec,
-  correctness: PALETTE.cor,
-  readability: PALETTE.read,
+  correctness: PALETTE.bug,
+  readability: PALETTE.bug,
 };
 
 export const SEVERITY_COLOR: Record<Severity, string> = {
-  CRITICAL: '#ff5d6c',
-  HIGH: '#f0b454',
-  MEDIUM: '#f4c430',
-  LOW: '#54b8ff',
-  INFO: '#6f6f76',
+  CRITICAL: '#f26d78',
+  HIGH: '#e8a33d',
+  MEDIUM: '#e5c07b',
+  LOW: '#e5c07b',
+  INFO: '#6e6e6e',
 };
 
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -47,17 +58,19 @@ const AGENT_PRIORITY: Record<AgentName, number> = {
   readability: 1,
 };
 
-/** lucide-style icon name to render on a node badge, keyed by lens. */
-export const LENS_ICON: Record<AgentName, 'shield-alert' | 'bug' | 'eye'> = {
+/** lucide-style icon name to render on a node badge, keyed by lens. The two
+ *  Sidecode agents are Security and Bug; correctness + readability both
+ *  surface under the Bug lens. */
+export const LENS_ICON: Record<AgentName, 'shield-alert' | 'bug'> = {
   security: 'shield-alert',
   correctness: 'bug',
-  readability: 'eye',
+  readability: 'bug',
 };
 
 export const LENS_LABEL: Record<AgentName, string> = {
   security: 'Security',
-  correctness: 'Correctness',
-  readability: 'Readability',
+  correctness: 'Bug',
+  readability: 'Bug',
 };
 
 /** True if `sev`/`agent` is more severe than the current worst on a node. */

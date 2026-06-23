@@ -4,34 +4,35 @@ import ScannerCard from "@/components/ScannerCard";
 import PageInteractions from "@/components/PageInteractions";
 import LandingNav from "@/components/landing/LandingNav";
 import HeroCTA from "@/components/landing/HeroCTA";
+import LiveCompanionGraph from "@/components/landing/LiveCompanionGraph";
 
 const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace";
 
+/**
+ * Sidecode landing page — a faithful React reproduction of
+ * design/Sidecode-Landing.html. Server-rendered markup; client interactivity
+ * (canvas, scanner state machine, live-companion graph, reveals, counters,
+ * magnetic buttons, tilt, card hovers) lives in the client components and
+ * PageInteractions. Copy, layout, spacing, fonts, colors, and motion match
+ * the export.
+ */
 export default function Home() {
   return (
-    <div className="bt-root">
+    <div className="sc-root">
       <CanvasBackground />
       <LandingNav />
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: "none",
-          background:
-            "radial-gradient(900px 600px at 78% 8%,rgba(131,200,24,.10),transparent 60%),radial-gradient(700px 500px at 10% 90%,rgba(84,184,255,.06),transparent 60%)",
-        }}
-      />
+
+      <span id="top" />
 
       {/* HERO */}
       <header
-        className="bt-hero"
+        className="sc-hero-grid"
         style={{
           position: "relative",
           zIndex: 2,
           maxWidth: 1280,
           margin: "0 auto",
-          padding: "78px 32px 64px",
+          padding: "140px 32px 64px",
           display: "grid",
           gridTemplateColumns: "1.02fr 1.08fr",
           gap: 54,
@@ -40,50 +41,34 @@ export default function Home() {
       >
         <div>
           <h1
+            className="sc-h1-big"
             data-reveal
-            data-reveal-delay="60"
             style={{
-              fontSize: 64,
-              lineHeight: 1.02,
+              fontSize: 62,
+              lineHeight: 1.03,
               fontWeight: 800,
               letterSpacing: "-.035em",
-              margin: "0 0 20px",
+              margin: "8px 0 20px",
             }}
           >
-            Ship fast.
+            Review that
             <br />
-            Merge with
-            <br />
-            <span style={{ position: "relative", whiteSpace: "nowrap" }}>
-              <span
-                style={{
-                  background:
-                    "linear-gradient(100deg,var(--lime),var(--lime-bright),var(--lime))",
-                  backgroundSize: "200% auto",
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  animation: "bt-grad 5s linear infinite",
-                }}
-              >
-                confidence.
-              </span>
-            </span>
+            rides <span style={{ color: "var(--in)" }}>side by side.</span>
           </h1>
           <p
             data-reveal
             data-reveal-delay="120"
             style={{
-              fontSize: 19,
+              fontSize: 18.5,
               lineHeight: 1.55,
               color: "var(--tx2)",
               margin: "0 0 34px",
-              maxWidth: 460,
+              maxWidth: 466,
               fontWeight: 400,
             }}
           >
-            AI ships code faster than humans can review it. BugTrap reviews every
-            change and hands you one clear verdict before it merges.
+            Connect a repo. Sidecode maps it live and re-scans every push,
+            finding problems, drafting fixes, opening the PR.
           </p>
           <div
             data-reveal
@@ -97,14 +82,14 @@ export default function Home() {
           >
             <HeroCTA />
             <a
-              href="#"
+              href="#how"
               className="bt-ghost-btn"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 9,
-                background: "rgba(255,255,255,.04)",
-                border: "1px solid var(--line2)",
+                background: "transparent",
+                border: "1px solid var(--line)",
                 color: "var(--tx)",
                 textDecoration: "none",
                 fontSize: 16,
@@ -125,7 +110,6 @@ export default function Home() {
 
       {/* STATS BAND */}
       <section
-        className="bt-sec"
         style={{
           position: "relative",
           zIndex: 2,
@@ -136,37 +120,57 @@ export default function Home() {
       >
         <div
           data-reveal
-          className="bt-stats"
+          className="sc-stats-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4,1fr)",
             gap: 1,
             background: "var(--line)",
             border: "1px solid var(--line)",
-            borderRadius: 16,
+            borderRadius: 14,
             overflow: "hidden",
           }}
         >
-          <Stat to="3" label="specialist agents per review" />
-          <Stat
-            to="1"
-            label="reconciled verdict, no noise"
-            color="var(--lime)"
-          />
-          <Stat
-            to="28"
-            prefix="<"
-            suffix="s"
-            label="typical scan, file to verdict"
-          />
-          <Stat to="100" suffix="%" label="of diffs reviewed, every push" />
+          <Stat to="2" label="specialist agents per review" />
+          <Stat to="1" label="reconciled verdict, no noise" color="var(--in)" />
+          <Stat to="28" prefix="<" suffix="s" label="from push to verdict" />
+          <Stat to="100" suffix="%" label="of changed files re-scanned" />
         </div>
+      </section>
+
+      {/* LIVE COMPANION (centerpiece) */}
+      <section
+        id="live"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          maxWidth: 1180,
+          margin: "0 auto",
+          padding: "120px 32px 40px",
+        }}
+      >
+        <div
+          data-reveal
+          style={{ textAlign: "center", maxWidth: 720, margin: "0 auto 52px" }}
+        >
+          <Eyebrow>LIVE COMPANION</Eyebrow>
+          <h2 className="sc-h2-big" style={h2Big}>
+            Your repo, alive on a graph.
+          </h2>
+          <p style={leadP}>
+            Connect a repo and Sidecode maps it node by node. Push a change and
+            it re-scans only what moved — the touched file lights up, a finding
+            lands, a fix is drafted, and the node goes green when it’s safe to
+            merge.
+          </p>
+        </div>
+
+        <LiveCompanionGraph />
       </section>
 
       {/* HOW IT WORKS */}
       <section
         id="how"
-        className="bt-sec"
         style={{
           position: "relative",
           zIndex: 2,
@@ -180,34 +184,19 @@ export default function Home() {
           style={{ textAlign: "center", maxWidth: 680, margin: "0 auto 64px" }}
         >
           <Eyebrow>THE REVIEW LOOP</Eyebrow>
-          <h2
-            style={{
-              fontSize: 44,
-              fontWeight: 800,
-              letterSpacing: "-.03em",
-              margin: "0 0 16px",
-              lineHeight: 1.05,
-            }}
-          >
-            Three lenses. One verdict.
+          <h2 className="sc-h2-big" style={h2Big}>
+            Two lenses. One verdict.
           </h2>
-          <p
-            style={{
-              fontSize: 18,
-              color: "var(--tx2)",
-              lineHeight: 1.55,
-              margin: 0,
-            }}
-          >
-            Every change is inspected in parallel from three distinct angles. A
-            coordinating agent reconciles the findings — deduping overlaps and
+          <p style={leadP}>
+            Every changed file is inspected in parallel by two specialists. A
+            coordinating agent reconciles their findings — deduping overlaps and
             resolving severity disagreements — into a single prioritized call.
           </p>
         </div>
 
         <div
           data-reveal
-          className="bt-how-grid"
+          className="sc-how-grid"
           style={{
             position: "relative",
             display: "grid",
@@ -216,22 +205,16 @@ export default function Home() {
             alignItems: "center",
           }}
         >
-          {/* animated flow connectors */}
           <FlowConnector left="25%" />
           <FlowConnector left="71%" dotDelay=".4s" />
 
           {/* input */}
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-              zIndex: 2,
-            }}
+            style={{ display: "flex", flexDirection: "column", gap: 14, zIndex: 2 }}
           >
-            <InputCard title="File" sub="single source file" />
-            <InputCard title="Function" sub="a focused unit" />
-            <InputCard title="Pull request" sub="full diff & context" />
+            <InputCard title="Changed file" sub="on every push" />
+            <InputCard title="Diff & context" sub="graph neighbors" />
+            <InputCard title="Pull request" sub="full review pass" />
           </div>
 
           {/* agents */}
@@ -242,11 +225,9 @@ export default function Home() {
               gridTemplateColumns: "1fr",
               gap: 14,
               padding: 24,
-              border: "1px solid var(--line2)",
+              border: "1px solid var(--line)",
               borderRadius: 18,
-              background:
-                "linear-gradient(180deg,rgba(131,200,24,.04),transparent)",
-              boxShadow: "0 0 40px -18px rgba(131,200,24,.35)",
+              background: "var(--surf)",
               zIndex: 2,
             }}
           >
@@ -259,44 +240,39 @@ export default function Home() {
                 fontFamily: mono,
                 fontSize: 10.5,
                 letterSpacing: ".16em",
-                color: "var(--lime)",
+                color: "var(--in)",
               }}
             >
               PARALLEL ANALYSIS
             </div>
             <AgentRow
+              rgb="242,109,120"
               color="var(--sec)"
-              rgb="255,93,108"
               title="Security agent"
-              sub="injection, secrets, authz, unsafe data flow"
+              sub="vulnerabilities, secrets, exposure, unsafe data flow"
               marginTop={22}
               icon={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />}
             />
             <AgentRow
-              color="var(--cor)"
-              rgb="131,200,24"
-              title="Correctness agent"
-              sub="logic, edge cases, async, error handling"
+              rgb="232,163,61"
+              color="var(--bug)"
+              title="Bug agent"
+              sub="logic errors, edge cases, broken behavior"
               shimmerDelay=".5s"
               ringDelay=".8s"
               icon={
                 <>
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </>
-              }
-            />
-            <AgentRow
-              color="var(--read)"
-              rgb="84,184,255"
-              title="Readability agent"
-              sub="clarity, naming, structure, maintainability"
-              shimmerDelay="1s"
-              ringDelay="1.6s"
-              icon={
-                <>
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  <path d="m8 2 1.88 1.88" />
+                  <path d="M14.12 3.88 16 2" />
+                  <path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" />
+                  <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" />
+                  <path d="M12 20v-9" />
+                  <path d="M6.53 9C4.6 8.8 3 7.1 3 5" />
+                  <path d="M6 13H2" />
+                  <path d="M3 21c0-2.1 1.7-3.9 3.8-4" />
+                  <path d="M20.97 5c0 2.1-1.6 3.8-3.5 4" />
+                  <path d="M22 13h-4" />
+                  <path d="M17.2 17c2.1.1 3.8 1.9 3.8 4" />
                 </>
               }
             />
@@ -304,37 +280,18 @@ export default function Home() {
 
           {/* coordinator + verdict */}
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-              zIndex: 2,
-            }}
+            style={{ display: "flex", flexDirection: "column", gap: 16, zIndex: 2 }}
           >
             <div
               style={{
                 padding: 20,
-                border: "1px solid var(--lime)",
+                border: "1px solid var(--in)",
                 borderRadius: 16,
-                background: "rgba(131,200,24,.06)",
+                background: "rgba(92,138,240,.06)",
                 position: "relative",
                 overflow: "hidden",
-                boxShadow: "0 0 36px -14px rgba(131,200,24,.5)",
               }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  top: -34,
-                  right: -34,
-                  width: 110,
-                  height: 110,
-                  borderRadius: "50%",
-                  background:
-                    "radial-gradient(circle,rgba(131,200,24,.28),transparent 70%)",
-                  animation: "bt-glow 3s infinite",
-                }}
-              />
               <div
                 style={{
                   position: "relative",
@@ -351,12 +308,12 @@ export default function Home() {
                     position: "absolute",
                     inset: -6,
                     borderRadius: "50%",
-                    border: "1px dashed rgba(131,200,24,.45)",
+                    border: "1px dashed rgba(92,138,240,.45)",
                     animation: "bt-orbit 9s linear infinite",
                   }}
                 />
                 <Image
-                  src="/BugTrap-logo.png"
+                  src="/Sidecode-logo.png"
                   alt=""
                   width={30}
                   height={30}
@@ -365,7 +322,6 @@ export default function Home() {
                     height: 30,
                     objectFit: "contain",
                     animation: "bt-bob 3.4s ease-in-out infinite",
-                    filter: "drop-shadow(0 0 8px rgba(131,200,24,.6))",
                   }}
                 />
               </div>
@@ -373,22 +329,18 @@ export default function Home() {
                 Coordinator
               </div>
               <div
-                style={{
-                  fontSize: 13.5,
-                  color: "var(--tx2)",
-                  lineHeight: 1.5,
-                }}
+                style={{ fontSize: 13.5, color: "var(--tx2)", lineHeight: 1.5 }}
               >
-                Reconciles the three reports — merges duplicates, settles
-                severity conflicts, ranks by impact.
+                Reconciles the two reports — merges duplicates, settles severity
+                conflicts, ranks by impact.
               </div>
             </div>
             <div
               style={{
                 padding: "18px 20px",
-                border: "1px solid var(--line2)",
+                border: "1px solid var(--line)",
                 borderRadius: 16,
-                background: "var(--surf2)",
+                background: "var(--elev)",
                 display: "flex",
                 alignItems: "center",
                 gap: 12,
@@ -399,19 +351,15 @@ export default function Home() {
                   width: 11,
                   height: 11,
                   borderRadius: "50%",
-                  background: "var(--lime)",
-                  boxShadow: "0 0 12px var(--lime)",
+                  background: "var(--safe)",
+                  boxShadow: "0 0 12px var(--safe)",
                   flex: "none",
                   animation: "bt-glow 2.2s infinite",
                 }}
               />
               <div>
                 <div
-                  style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    letterSpacing: ".02em",
-                  }}
+                  style={{ fontWeight: 800, fontSize: 15, letterSpacing: ".02em" }}
                 >
                   SAFE TO MERGE / BLOCKED
                 </div>
@@ -427,7 +375,6 @@ export default function Home() {
       {/* FEATURES */}
       <section
         id="features"
-        className="bt-sec"
         style={{
           position: "relative",
           zIndex: 2,
@@ -439,20 +386,14 @@ export default function Home() {
         <div data-reveal style={{ marginBottom: 56 }}>
           <Eyebrow>WHAT YOU GET BACK</Eyebrow>
           <h2
-            style={{
-              fontSize: 44,
-              fontWeight: 800,
-              letterSpacing: "-.03em",
-              margin: 0,
-              lineHeight: 1.05,
-              maxWidth: 620,
-            }}
+            className="sc-h2-big"
+            style={{ ...h2Big, margin: 0, maxWidth: 620, textAlign: "left" }}
           >
             A report you can act on, not a wall of warnings.
           </h2>
         </div>
         <div
-          className="bt-feat-grid"
+          className="sc-feat-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3,1fr)",
@@ -462,7 +403,7 @@ export default function Home() {
           {/* consensus (span 2) */}
           <div
             data-reveal
-            className="feat"
+            className="feat sc-feat-wide"
             style={{
               gridColumn: "span 2",
               padding: 26,
@@ -474,14 +415,7 @@ export default function Home() {
               position: "relative",
             }}
           >
-            <div
-              style={{
-                fontSize: 13,
-                fontFamily: mono,
-                color: "var(--lime)",
-                marginBottom: 18,
-              }}
-            >
+            <div style={{ ...featEyebrow, marginBottom: 18 }}>
               CONSENSUS &amp; DISAGREEMENT
             </div>
             <h3
@@ -503,31 +437,33 @@ export default function Home() {
                 maxWidth: 460,
               }}
             >
-              When 2 of 3 agents flag the same line, you know it’s real. When
-              they disagree on severity, the coordinator shows its reasoning
-              instead of hiding it.
+              When both agents flag the same line, you know it’s real. When they
+              disagree on severity, the coordinator shows its reasoning instead
+              of hiding it.
             </p>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Pill
-                bg="rgba(255,93,108,.1)"
-                border="rgba(255,93,108,.25)"
-                color="#ff8a95"
+                bg="rgba(242,109,120,.1)"
+                border="rgba(242,109,120,.25)"
+                color="#f58b94"
                 icon={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />}
               >
                 security
               </Pill>
               <Pill
-                bg="rgba(131,200,24,.1)"
-                border="rgba(131,200,24,.25)"
-                color="var(--lime)"
+                bg="rgba(232,163,61,.1)"
+                border="rgba(232,163,61,.25)"
+                color="var(--bug)"
                 icon={
                   <>
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
+                    <path d="M12 20v-9" />
+                    <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" />
+                    <path d="m8 2 1.88 1.88" />
+                    <path d="M14.12 3.88 16 2" />
                   </>
                 }
               >
-                correctness
+                bug
               </Pill>
               <span
                 style={{
@@ -538,12 +474,12 @@ export default function Home() {
                   fontSize: 12.5,
                   padding: "7px 12px",
                   borderRadius: 8,
-                  background: "rgba(255,255,255,.05)",
-                  border: "1px solid var(--line2)",
+                  background: "rgba(255,255,255,.04)",
+                  border: "1px solid var(--line)",
                   color: "var(--tx3)",
                 }}
               >
-                2 of 3 flagged
+                both flagged
               </span>
             </div>
           </div>
@@ -562,7 +498,7 @@ export default function Home() {
                   fontFamily: mono,
                   fontSize: 38,
                   fontWeight: 700,
-                  color: "var(--lime)",
+                  color: "var(--in)",
                 }}
               >
                 0.97
@@ -583,109 +519,54 @@ export default function Home() {
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               <SevBar label="CRIT" color="var(--sec)" width="100%" />
-              <SevBar label="HIGH" color="#f0b454" width="62%" />
-              <SevBar label="LOW" color="var(--read)" width="30%" />
+              <SevBar label="HIGH" color="var(--bug)" width="62%" />
+              <SevBar label="LOW" color="var(--warn)" width="30%" />
             </div>
           </div>
 
-          {/* inline PR comments */}
+          {/* on the graph */}
           <div data-reveal className="feat" style={featCard}>
-            <div style={featEyebrow}>INLINE PR COMMENTS</div>
-            <h3 style={featH3}>Comments land on the line.</h3>
+            <div style={featEyebrow}>ON THE GRAPH</div>
+            <h3 style={featH3}>Findings land on the node.</h3>
             <p style={{ ...featP, marginBottom: 0 }}>
-              Findings post as inline review comments, right where the code
-              lives — no context-switching.
+              Issues surface right on the file in the graph and post as inline
+              PR comments — no context-switching.
             </p>
           </div>
 
           {/* the gate */}
-          <div
-            data-reveal
-            className="feat"
-            style={{
-              padding: 26,
-              border: "1px solid var(--line)",
-              borderRadius: 16,
-              background:
-                "linear-gradient(160deg,rgba(131,200,24,.08),var(--surf) 60%)",
-              transition: "transform .3s,border-color .3s,box-shadow .3s",
-            }}
-          >
+          <div data-reveal className="feat" style={featCard}>
             <div style={featEyebrow}>THE GATE</div>
             <h3 style={featH3}>Safe to merge, or blocked. No maybes.</h3>
             <p style={featP}>
-              BugTrap sits in your CI/CD as a gate. Green means ship. Red means
+              Sidecode sits in your CI/CD as a gate. Green means ship. Red means
               here’s exactly what to fix first.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "12px 16px",
-                  borderRadius: 11,
-                  background: "rgba(131,200,24,.12)",
-                  border: "1px solid rgba(131,200,24,.35)",
-                }}
+              <GateRow
+                bg="rgba(78,201,168,.1)"
+                border="rgba(78,201,168,.35)"
+                dot="var(--safe)"
+                color="var(--safe)"
               >
-                <span
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: "50%",
-                    background: "var(--lime)",
-                  }}
-                />
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontFamily: mono,
-                    fontSize: 13,
-                    color: "var(--lime)",
-                  }}
-                >
-                  SAFE TO MERGE
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "12px 16px",
-                  borderRadius: 11,
-                  background: "rgba(255,93,108,.1)",
-                  border: "1px solid rgba(255,93,108,.3)",
-                }}
+                SAFE TO MERGE
+              </GateRow>
+              <GateRow
+                bg="rgba(242,109,120,.1)"
+                border="rgba(242,109,120,.3)"
+                dot="var(--sec)"
+                color="#f58b94"
               >
-                <span
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: "50%",
-                    background: "var(--sec)",
-                  }}
-                />
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontFamily: mono,
-                    fontSize: 13,
-                    color: "#ff8a95",
-                  }}
-                >
-                  BLOCKED · 1 CRITICAL
-                </span>
-              </div>
+                BLOCKED · 1 CRITICAL
+              </GateRow>
             </div>
           </div>
         </div>
       </section>
 
-      {/* WHY GEMINI */}
+      {/* WHY GEMINI + VERTEX + ADK */}
       <section
-        className="bt-sec"
+        id="why"
         style={{
           position: "relative",
           zIndex: 2,
@@ -695,61 +576,47 @@ export default function Home() {
         }}
       >
         <div
+          className="sc-why-pad"
           data-reveal
-          className="bt-why-panel"
           style={{
             border: "1px solid var(--line)",
             borderRadius: 22,
-            background:
-              "radial-gradient(700px 400px at 80% 0%,rgba(131,200,24,.1),transparent 60%),var(--surf)",
+            background: "var(--surf)",
             padding: 54,
             overflow: "hidden",
             position: "relative",
           }}
         >
           <Image
-            src="/BugTrap-logo.png"
+            src="/Sidecode-logo.png"
             alt=""
-            width={200}
-            height={200}
+            width={190}
+            height={190}
             style={{
               position: "absolute",
-              top: -30,
-              right: -26,
-              width: 200,
-              height: 200,
+              top: -24,
+              right: -20,
+              width: 190,
+              height: 190,
               objectFit: "contain",
-              opacity: 0.06,
-              transform: "rotate(8deg)",
+              opacity: 0.05,
+              transform: "rotate(6deg)",
               pointerEvents: "none",
             }}
           />
-          <div
-            style={{
-              position: "absolute",
-              bottom: -60,
-              left: -40,
-              width: 220,
-              height: 220,
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle,rgba(131,200,24,.1),transparent 70%)",
-              animation: "bt-glow 4s infinite",
-              pointerEvents: "none",
-            }}
-          />
-          <div style={{ maxWidth: 640, position: "relative" }}>
-            <Eyebrow noMargin>BUILT ON GOOGLE’S AI STACK</Eyebrow>
+          <div style={{ maxWidth: 660, position: "relative" }}>
+            <Eyebrow>BUILT ON GOOGLE’S AI STACK</Eyebrow>
             <h2
+              className="sc-h2-big"
               style={{
+                ...h2Big,
                 fontSize: 40,
-                fontWeight: 800,
-                letterSpacing: "-.03em",
                 margin: "0 0 18px",
                 lineHeight: 1.08,
+                textAlign: "left",
               }}
             >
-              Production-grade reasoning, orchestrated to agree.
+              Why Gemini + Vertex + ADK.
             </h2>
             <p
               style={{
@@ -759,14 +626,14 @@ export default function Home() {
                 margin: 0,
               }}
             >
-              A single model guesses. A coordinated panel deliberates. BugTrap
-              leans on the Gemini API for deep code reasoning, the Agent
-              Development Kit to orchestrate the panel, and Vertex AI for
-              enterprise-grade scale and governance.
+              A single model guesses. A coordinated panel deliberates. Sidecode
+              runs its reasoning on Gemini, serves and tunes it on Vertex AI, and
+              orchestrates the panel with Google’s ADK — parallel agents, a
+              coordinator, and live progress on every push.
             </p>
           </div>
           <div
-            className="bt-stack-grid"
+            className="sc-stack-grid"
             style={{
               position: "relative",
               display: "grid",
@@ -781,23 +648,44 @@ export default function Home() {
                 <span
                   style={{
                     position: "relative",
-                    width: 22,
-                    height: 22,
-                    background:
-                      "linear-gradient(135deg,var(--lime-bright),var(--lime))",
-                    borderRadius: 6,
+                    width: 20,
+                    height: 20,
+                    background: "var(--in)",
+                    borderRadius: 5,
                     transform: "rotate(45deg)",
-                    boxShadow: "0 0 14px rgba(131,200,24,.6)",
                     animation: "bt-bob 3s ease-in-out infinite",
                   }}
                 />
               </div>
               <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 7 }}>
-                Gemini API
+                Gemini — the engine
               </div>
               <div style={stackBody}>
-                Long-context code reasoning that understands the whole change,
-                not just the line.
+                Long-context reasoning that understands the whole change, not
+                just the line.
+              </div>
+            </div>
+            <div className="stackcard" style={stackCard}>
+              <div style={stackIconWrap}>
+                <span style={stackIconBg} />
+                <span
+                  style={{
+                    position: "relative",
+                    width: 0,
+                    height: 0,
+                    borderLeft: "12px solid transparent",
+                    borderRight: "12px solid transparent",
+                    borderBottom: "21px solid var(--in)",
+                    animation: "bt-bob 3.4s ease-in-out infinite .3s",
+                  }}
+                />
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 7 }}>
+                Vertex AI — served &amp; tuned
+              </div>
+              <div style={stackBody}>
+                Hosts and tunes the models at every-PR scale with the governance
+                teams require.
               </div>
             </div>
             <div className="stackcard" style={stackCard}>
@@ -808,7 +696,7 @@ export default function Home() {
                     position: "absolute",
                     inset: -5,
                     borderRadius: "50%",
-                    border: "1px dashed rgba(131,200,24,.4)",
+                    border: "1px dashed rgba(92,138,240,.4)",
                     animation: "bt-orbit 8s linear infinite",
                   }}
                 />
@@ -827,42 +715,82 @@ export default function Home() {
                 </span>
               </div>
               <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 7 }}>
-                Google ADK
+                ADK — orchestration
               </div>
               <div style={stackBody}>
-                Orchestrates the three specialists and the coordinator as one
-                reliable workflow.
-              </div>
-            </div>
-            <div className="stackcard" style={stackCard}>
-              <div style={stackIconWrap}>
-                <span style={stackIconBg} />
-                <span
-                  style={{
-                    position: "relative",
-                    width: 0,
-                    height: 0,
-                    borderLeft: "13px solid transparent",
-                    borderRight: "13px solid transparent",
-                    borderBottom: "23px solid var(--lime)",
-                    filter: "drop-shadow(0 0 8px rgba(131,200,24,.55))",
-                    animation: "bt-bob 3.4s ease-in-out infinite .4s",
-                  }}
-                />
-              </div>
-              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 7 }}>
-                Vertex AI
-              </div>
-              <div style={stackBody}>
-                Scales to every PR with the security, governance, and
-                reliability teams require.
+                Runs the two specialists and the coordinator as one reliable
+                workflow with live progress.
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div style={{ height: 60 }} />
+      {/* FOOTER */}
+      <footer
+        style={{
+          position: "relative",
+          zIndex: 2,
+          maxWidth: 1200,
+          margin: "80px auto 0",
+          padding: "40px 32px 56px",
+          borderTop: "1px solid var(--line)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Image
+            src="/Sidecode-logo.png"
+            alt="Sidecode"
+            width={34}
+            height={34}
+            style={{ width: 34, height: 34, objectFit: "contain" }}
+          />
+          <div>
+            <div
+              style={{
+                fontWeight: 800,
+                fontSize: 18,
+                letterSpacing: "-.025em",
+                lineHeight: 1.1,
+              }}
+            >
+              Sidecode
+            </div>
+            <div
+              style={{
+                fontFamily: mono,
+                fontSize: 11.5,
+                color: "var(--tx3)",
+                marginTop: 2,
+              }}
+            >
+              a live code companion
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 26,
+            flexWrap: "wrap",
+          }}
+        >
+          <FooterLink href="#live">Live companion</FooterLink>
+          <FooterLink href="#how">How it works</FooterLink>
+          <FooterLink href="#features">Features</FooterLink>
+          <span
+            style={{ fontFamily: mono, fontSize: 11.5, color: "var(--tx3)" }}
+          >
+            review that rides along as you ship
+          </span>
+        </div>
+      </footer>
 
       <PageInteractions />
     </div>
@@ -871,13 +799,21 @@ export default function Home() {
 
 /* ── small presentational helpers (server components) ──────────────── */
 
-function Eyebrow({
-  children,
-  noMargin,
-}: {
-  children: React.ReactNode;
-  noMargin?: boolean;
-}) {
+const h2Big: React.CSSProperties = {
+  fontSize: 44,
+  fontWeight: 800,
+  letterSpacing: "-.03em",
+  margin: "0 0 16px",
+  lineHeight: 1.05,
+};
+const leadP: React.CSSProperties = {
+  fontSize: 18,
+  color: "var(--tx2)",
+  lineHeight: 1.55,
+  margin: 0,
+};
+
+function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
@@ -885,8 +821,8 @@ function Eyebrow({
         fontSize: 12,
         fontWeight: 600,
         letterSpacing: ".18em",
-        color: "var(--lime)",
-        marginBottom: noMargin ? 18 : 16,
+        color: "var(--in)",
+        marginBottom: 16,
         display: "inline-flex",
         alignItems: "center",
         gap: 8,
@@ -897,8 +833,8 @@ function Eyebrow({
           width: 7,
           height: 7,
           borderRadius: "50%",
-          background: "var(--lime)",
-          boxShadow: "0 0 8px var(--lime)",
+          background: "var(--in)",
+          boxShadow: "0 0 8px var(--in)",
           animation: "bt-glow 2s infinite",
         }}
       />
@@ -950,16 +886,10 @@ function Stat({
   );
 }
 
-function FlowConnector({
-  left,
-  dotDelay,
-}: {
-  left: string;
-  dotDelay?: string;
-}) {
+function FlowConnector({ left, dotDelay }: { left: string; dotDelay?: string }) {
   return (
     <div
-      className="bt-flow-conn"
+      className="sc-flow-conn"
       style={{
         position: "absolute",
         top: "50%",
@@ -980,7 +910,7 @@ function FlowConnector({
           height: 2,
           transform: "translateY(-50%)",
           background:
-            "repeating-linear-gradient(90deg,rgba(131,200,24,.55) 0 6px,transparent 6px 12px)",
+            "repeating-linear-gradient(90deg,rgba(92,138,240,.55) 0 6px,transparent 6px 12px)",
           backgroundSize: "18px 2px",
           animation: "bt-dash .55s linear infinite",
         }}
@@ -992,8 +922,8 @@ function FlowConnector({
           width: 7,
           height: 7,
           borderRadius: "50%",
-          background: "var(--lime-bright)",
-          boxShadow: "0 0 11px var(--lime)",
+          background: "var(--in2)",
+          boxShadow: "0 0 11px var(--in)",
           transform: "translateY(-50%)",
           animation:
             "bt-flow 1.7s linear infinite" + (dotDelay ? " " + dotDelay : ""),
@@ -1019,12 +949,7 @@ function InputCard({ title, sub }: { title: string; sub: string }) {
       }}
     >
       <span
-        style={{
-          width: 9,
-          height: 9,
-          borderRadius: 2,
-          background: "var(--tx2)",
-        }}
+        style={{ width: 9, height: 9, borderRadius: 2, background: "var(--tx2)" }}
       />
       <div>
         <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
@@ -1068,7 +993,7 @@ function AgentRow({
         marginTop,
         border: `1px solid rgba(${rgb},.3)`,
         borderRadius: 13,
-        background: `rgba(${rgb},.05)`,
+        background: `rgba(${rgb},.06)`,
         transition: "transform .25s",
       }}
     >
@@ -1076,7 +1001,7 @@ function AgentRow({
         style={{
           position: "absolute",
           inset: 0,
-          background: `linear-gradient(105deg,transparent 35%,rgba(${rgb},.16) 50%,transparent 65%)`,
+          background: `linear-gradient(105deg,transparent 35%,rgba(${rgb},.14) 50%,transparent 65%)`,
           transform: "translateX(-120%)",
           animation: `bt-shimmer 4.2s ease-in-out infinite ${shimmerDelay}`,
           pointerEvents: "none",
@@ -1199,6 +1124,65 @@ function SevBar({
   );
 }
 
+function GateRow({
+  bg,
+  border,
+  dot,
+  color,
+  children,
+}: {
+  bg: string;
+  border: string;
+  dot: string;
+  color: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "12px 16px",
+        borderRadius: 11,
+        background: bg,
+        border: `1px solid ${border}`,
+      }}
+    >
+      <span
+        style={{ width: 9, height: 9, borderRadius: "50%", background: dot }}
+      />
+      <span
+        style={{ fontWeight: 700, fontFamily: mono, fontSize: 13, color }}
+      >
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function FooterLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      style={{
+        textDecoration: "none",
+        color: "var(--tx2)",
+        fontSize: 14,
+        fontWeight: 500,
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 /* shared style objects */
 const featCard: React.CSSProperties = {
   padding: 26,
@@ -1210,7 +1194,7 @@ const featCard: React.CSSProperties = {
 const featEyebrow: React.CSSProperties = {
   fontSize: 13,
   fontFamily: mono,
-  color: "var(--lime)",
+  color: "var(--in)",
   marginBottom: 18,
 };
 const featH3: React.CSSProperties = {
@@ -1227,9 +1211,9 @@ const featP: React.CSSProperties = {
 };
 const stackCard: React.CSSProperties = {
   padding: "26px 24px",
-  border: "1px solid var(--line2)",
+  border: "1px solid var(--line)",
   borderRadius: 15,
-  background: "rgba(255,255,255,.02)",
+  background: "var(--elev)",
   transition: "transform .3s,border-color .3s,box-shadow .3s",
 };
 const stackIconWrap: React.CSSProperties = {
@@ -1245,8 +1229,8 @@ const stackIconBg: React.CSSProperties = {
   position: "absolute",
   inset: 0,
   borderRadius: 12,
-  background: "rgba(131,200,24,.1)",
-  border: "1px solid rgba(131,200,24,.25)",
+  background: "rgba(92,138,240,.1)",
+  border: "1px solid rgba(92,138,240,.25)",
 };
 const stackBody: React.CSSProperties = {
   color: "var(--tx2)",
@@ -1257,12 +1241,12 @@ const dotFull: React.CSSProperties = {
   width: 8,
   height: 8,
   borderRadius: "50%",
-  background: "var(--lime)",
+  background: "var(--in)",
 };
 const dotDim: React.CSSProperties = {
   width: 8,
   height: 8,
   borderRadius: "50%",
-  background: "var(--lime)",
+  background: "var(--in)",
   opacity: 0.55,
 };

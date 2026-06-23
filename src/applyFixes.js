@@ -5,7 +5,7 @@
  *
  * CLI usage:
  *   node src/applyFixes.js fixes.json             # dry-run — shows what would change
- *   node src/applyFixes.js fixes.json --apply     # writes <file>.bugtrap-fixed + .env.example
+ *   node src/applyFixes.js fixes.json --apply     # writes <file>.sidecode-fixed + .env.example
  *
  * Module usage:
  *   import { applyFixes } from './applyFixes.js';
@@ -66,7 +66,7 @@ function collectEnvLines(autoFixes) {
 /**
  * @param {{ fixes: Array, summary: object }} fixOutput - output from generateFixes()
  * @param {{ apply?: boolean, cwd?: string }} options
- *   apply — if true, write .bugtrap-fixed files and append to .env.example
+ *   apply — if true, write .sidecode-fixed files and append to .env.example
  *   cwd   — base directory for resolving file paths (defaults to process.cwd())
  */
 export async function applyFixes(fixOutput, { apply = false, cwd = process.cwd() } = {}) {
@@ -79,7 +79,7 @@ export async function applyFixes(fixOutput, { apply = false, cwd = process.cwd()
 
     const mode = apply ? 'APPLY' : 'DRY-RUN';
     console.log(`\n${'═'.repeat(60)}`);
-    console.log(`  BugTrap Fix Agent — ${mode}`);
+    console.log(`  Sidecode Fix Agent — ${mode}`);
     console.log(`  ${summary.auto_fixes} auto  |  ${summary.suggested_fixes} suggested`);
     console.log('═'.repeat(60));
 
@@ -114,7 +114,7 @@ export async function applyFixes(fixOutput, { apply = false, cwd = process.cwd()
 
     for (const [file, fileFixes] of byFile) {
         const srcPath = `${cwd}/${file}`;
-        const outPath = `${srcPath}.bugtrap-fixed`;
+        const outPath = `${srcPath}.sidecode-fixed`;
 
         label('AUTO', `${file}  (${fileFixes.length} fix${fileFixes.length !== 1 ? 'es' : ''})`);
 
@@ -150,7 +150,7 @@ export async function applyFixes(fixOutput, { apply = false, cwd = process.cwd()
             console.log(`  + ${line}`);
         }
         if (apply) {
-            const header = '\n# ── BugTrap auto-fix additions ──\n';
+            const header = '\n# ── Sidecode auto-fix additions ──\n';
             appendFileSync(envPath, header + envLines.join('\n') + '\n', 'utf-8');
             console.log(`  ✓ Appended to: ${envPath}`);
         } else {

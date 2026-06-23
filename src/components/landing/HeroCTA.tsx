@@ -19,20 +19,19 @@ export default function HeroCTA() {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 9,
-        background: 'var(--lime)',
-        color: '#15150f',
+        background: 'var(--in)',
+        color: '#0e1626',
         border: 'none',
         cursor: 'pointer',
         fontSize: 16,
         fontWeight: 700,
         padding: '15px 26px',
         borderRadius: 11,
-        boxShadow: '0 6px 26px rgba(131,200,24,.3)',
-        transition: 'box-shadow .25s, transform .1s',
+        transition: 'background .2s, transform .1s',
         fontFamily: 'inherit',
       }}
     >
-      Scan my code <span>→</span>
+      Connect a repo <span>→</span>
     </button>
   );
 }

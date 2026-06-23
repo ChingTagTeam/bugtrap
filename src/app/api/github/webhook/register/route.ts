@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 /**
  * POST { owner, repo, branch? }
  *
- * Registers a GitHub webhook on the given repo so BugTrap receives push /
+ * Registers a GitHub webhook on the given repo so Sidecode receives push /
  * pull_request events and re-scans automatically.
  *
  * The webhook URL is derived from the incoming request's origin so it works

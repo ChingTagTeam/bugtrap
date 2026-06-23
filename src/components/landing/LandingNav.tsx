@@ -44,7 +44,7 @@ export default function LandingNav() {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 24px',
-        background: scrolled ? 'rgba(29,29,32,.72)' : 'transparent',
+        background: scrolled ? 'rgba(30,30,30,.82)' : 'transparent',
         backdropFilter: scrolled ? 'blur(14px) saturate(140%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(14px) saturate(140%)' : 'none',
         borderBottom: `1px solid ${scrolled ? 'var(--line)' : 'transparent'}`,
@@ -57,20 +57,22 @@ export default function LandingNav() {
         style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'var(--tx)' }}
       >
         <Image
-          src="/BugTrap-logo.png"
-          alt="BugTrap"
+          src="/Sidecode-logo.png"
+          alt="Sidecode"
           width={28}
           height={28}
           priority
-          style={{ width: 28, height: 28, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(131,200,24,.45))' }}
+          style={{ width: 28, height: 28, objectFit: 'contain' }}
         />
-        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.02em' }}>BugTrap</span>
+        <span style={{ fontWeight: 800, fontSize: 18, letterSpacing: '-.025em' }}>Sidecode</span>
       </Link>
 
       {/* Center links (hidden on small screens) */}
       <div className="bt-nav-links" style={{ alignItems: 'center', gap: 26 }}>
+        <NavLink href="#live">Live companion</NavLink>
         <NavLink href="#how">How it works</NavLink>
         <NavLink href="#features">Features</NavLink>
+        <NavLink href="#why">Engine</NavLink>
       </div>
 
       {/* Auth control */}
@@ -94,15 +96,14 @@ export default function LandingNav() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 7,
-                background: 'var(--lime)',
-                color: '#15150f',
+                background: 'var(--in)',
+                color: '#0e1626',
                 border: 'none',
                 borderRadius: 10,
                 padding: '8px 15px',
                 fontSize: 13.5,
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 4px 18px rgba(131,200,24,.28)',
               }}
             >
               Scan repos
@@ -165,7 +166,7 @@ export default function LandingNav() {
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,.08)';
-              e.currentTarget.style.borderColor = 'rgba(131,200,24,.45)';
+              e.currentTarget.style.borderColor = 'rgba(92,138,240,.5)';
             }}
             onMouseOut={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,.04)';
@@ -191,9 +192,9 @@ export default function LandingNav() {
             gap: 8,
             padding: '10px 13px',
             borderRadius: 10,
-            background: 'rgba(40,22,24,.96)',
-            border: '1px solid rgba(255,93,108,.4)',
-            color: '#ff8a95',
+            background: 'rgba(45,30,32,.96)',
+            border: '1px solid rgba(242,109,120,.4)',
+            color: '#f58b94',
             fontSize: 12.5,
             lineHeight: 1.45,
             boxShadow: '0 14px 34px -14px rgba(0,0,0,.7)',
@@ -248,8 +249,8 @@ function Avatar({ src, name }: { src: string | null; name: string }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(131,200,24,.16)',
-        color: 'var(--lime)',
+        background: 'rgba(92,138,240,.16)',
+        color: 'var(--in)',
         fontFamily: mono,
         fontSize: 13,
         fontWeight: 700,

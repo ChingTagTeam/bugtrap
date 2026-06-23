@@ -223,7 +223,7 @@ function PublicScanSection({
         Drop in a public repo.
       </h1>
       <p style={{ fontSize: 17, color: 'var(--tx2)', lineHeight: 1.55, margin: '0 0 22px', maxWidth: 560 }}>
-        Paste a GitHub URL and watch BugTrap assemble a living map of what&apos;s safe to merge — no sign-in
+        Paste a GitHub URL and watch Sidecode assemble a living map of what&apos;s safe to merge — no sign-in
         required.
       </p>
 
@@ -267,12 +267,12 @@ function PublicScanSection({
             padding: '0 24px',
             borderRadius: 11,
             background: url.trim() ? 'var(--lime)' : 'rgba(255,255,255,.06)',
-            color: url.trim() ? '#15150f' : 'var(--tx3)',
+            color: url.trim() ? '#0e1626' : 'var(--tx3)',
             border: 'none',
             fontSize: 15,
             fontWeight: 700,
             cursor: url.trim() ? 'pointer' : 'not-allowed',
-            boxShadow: url.trim() ? '0 6px 26px rgba(131,200,24,.3)' : 'none',
+            boxShadow: url.trim() ? '0 6px 26px rgba(92,138,240,.3)' : 'none',
             flex: 'none',
           }}
         >
@@ -282,7 +282,7 @@ function PublicScanSection({
       </div>
 
       {error ? (
-        <div role="alert" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#ff8a95', fontSize: 13, fontFamily: mono }}>
+        <div role="alert" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, color: '#f58b94', fontSize: 13, fontFamily: mono }}>
           <AlertTriangle size={14} /> {error}
         </div>
       ) : (
@@ -380,9 +380,9 @@ function ConnectPrompt({ busy, error, onSignIn }: { busy: boolean; error: string
             maxWidth: 460,
             padding: '11px 14px',
             borderRadius: 10,
-            background: 'rgba(255,93,108,.08)',
-            border: '1px solid rgba(255,93,108,.3)',
-            color: '#ff8a95',
+            background: 'rgba(242,109,120,.08)',
+            border: '1px solid rgba(242,109,120,.3)',
+            color: '#f58b94',
             fontSize: 13,
             lineHeight: 1.5,
             textAlign: 'left',
@@ -406,7 +406,7 @@ function Ambient() {
         zIndex: 0,
         pointerEvents: 'none',
         background:
-          'radial-gradient(900px 600px at 82% 0%,rgba(131,200,24,.10),transparent 60%),radial-gradient(700px 500px at 6% 92%,rgba(84,184,255,.05),transparent 60%)',
+          'radial-gradient(900px 600px at 82% 0%,rgba(92,138,240,.10),transparent 60%),radial-gradient(700px 500px at 6% 92%,rgba(232,163,61,.05),transparent 60%)',
       }}
     />
   );
@@ -423,7 +423,7 @@ function Header({ user, onSignOut }: { user: ReturnType<typeof useAuth>['user'];
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 24px',
-        background: 'rgba(29,29,32,.72)',
+        background: 'rgba(30,30,30,.82)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         borderBottom: '1px solid var(--line)',
@@ -431,14 +431,14 @@ function Header({ user, onSignOut }: { user: ReturnType<typeof useAuth>['user'];
     >
       <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'var(--tx)' }}>
         <Image
-          src="/BugTrap-logo.png"
-          alt="BugTrap"
+          src="/Sidecode-logo.png"
+          alt="Sidecode"
           width={26}
           height={26}
           priority
-          style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(131,200,24,.45))' }}
+          style={{ width: 26, height: 26, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(92,138,240,.45))' }}
         />
-        <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.02em' }}>BugTrap</span>
+        <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-.02em' }}>Sidecode</span>
       </Link>
       {user && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -538,7 +538,7 @@ function Toolbar({
               padding: '7px 13px',
               borderRadius: 7,
               border: 'none',
-              background: visibility === v ? 'rgba(131,200,24,.16)' : 'transparent',
+              background: visibility === v ? 'rgba(92,138,240,.16)' : 'transparent',
               color: visibility === v ? 'var(--lime)' : 'var(--tx2)',
               fontFamily: mono,
               fontSize: 11.5,

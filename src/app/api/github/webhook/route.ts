@@ -55,7 +55,7 @@ export async function POST(req: Request): Promise<Response> {
   // Look up the registered webhook — tells us which user owns it + the secret.
   const webhook = await getWebhook(owner, repo);
   if (!webhook) {
-    // Repo isn't registered with BugTrap; ignore silently.
+    // Repo isn't registered with Sidecode; ignore silently.
     return new Response('OK', { status: 200 });
   }
 

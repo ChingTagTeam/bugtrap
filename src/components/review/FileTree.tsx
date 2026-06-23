@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, CornerDownRight } from 'lucide-react';
 import { fileTypeMeta } from '@/lib/file-icons';
 import { LENS_COLOR, type RFNode } from './graph-model';
 
@@ -58,10 +58,12 @@ export default function FileTree({
   nodes,
   selectedPath,
   onSelect,
+  onDrillFolder,
 }: {
   nodes: RFNode[];
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  onDrillFolder?: (path: string) => void;
 }) {
   const files = useMemo(() => nodes.filter((n) => n.kind === 'file'), [nodes]);
   const tree = useMemo(() => buildTree(files), [files]);
@@ -77,7 +79,7 @@ export default function FileTree({
   return (
     <div style={{ padding: '6px 6px 18px' }}>
       {tree.map((entry) => (
-        <TreeRow key={entry.path} entry={entry} depth={0} selectedPath={selectedPath} onSelect={onSelect} />
+        <TreeRow key={entry.path} entry={entry} depth={0} selectedPath={selectedPath} onSelect={onSelect} onDrillFolder={onDrillFolder} />
       ))}
     </div>
   );
@@ -88,11 +90,13 @@ function TreeRow({
   depth,
   selectedPath,
   onSelect,
+  onDrillFolder,
 }: {
   entry: TreeEntry;
   depth: number;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  onDrillFolder?: (path: string) => void;
 }) {
   const [open, setOpen] = useState(depth < 2);
   const indent = 8 + depth * 13;
@@ -100,18 +104,48 @@ function TreeRow({
   if (entry.kind === 'folder') {
     return (
       <>
-        <button
-          onClick={() => setOpen((o) => !o)}
-          style={{ ...rowStyle, paddingLeft: indent, color: 'var(--tx2)' }}
-          onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.04)')}
-          onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
-        >
-          {open ? <ChevronDown size={13} style={{ flex: 'none', color: 'var(--tx3)' }} /> : <ChevronRight size={13} style={{ flex: 'none', color: 'var(--tx3)' }} />}
-          {open ? <FolderOpen size={14} style={{ flex: 'none', color: 'var(--tx3)' }} /> : <Folder size={14} style={{ flex: 'none', color: 'var(--tx3)' }} />}
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-        </button>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }} className="bt-tree-folder">
+          <button
+            onClick={() => setOpen((o) => !o)}
+            style={{ ...rowStyle, paddingLeft: indent, paddingRight: onDrillFolder ? 28 : 8, color: 'var(--tx2)' }}
+            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.04)')}
+            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            {open ? <ChevronDown size={13} style={{ flex: 'none', color: 'var(--tx3)' }} /> : <ChevronRight size={13} style={{ flex: 'none', color: 'var(--tx3)' }} />}
+            {open ? <FolderOpen size={14} style={{ flex: 'none', color: 'var(--tx3)' }} /> : <Folder size={14} style={{ flex: 'none', color: 'var(--tx3)' }} />}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
+          </button>
+          {onDrillFolder && (
+            <button
+              onClick={() => onDrillFolder(entry.path)}
+              aria-label={`Focus the graph on ${entry.name}`}
+              title={`Focus graph on ${entry.name}`}
+              className="bt-tree-drill"
+              style={{
+                position: 'absolute',
+                right: 6,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 20,
+                height: 20,
+                borderRadius: 5,
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--tx3)',
+                cursor: 'pointer',
+                opacity: 0,
+                transition: 'opacity .15s, color .15s',
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.color = 'var(--in)')}
+              onMouseOut={(e) => (e.currentTarget.style.color = 'var(--tx3)')}
+            >
+              <CornerDownRight size={13} />
+            </button>
+          )}
+        </div>
         {open && entry.children.map((c) => (
-          <TreeRow key={c.path} entry={c} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
+          <TreeRow key={c.path} entry={c} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} onDrillFolder={onDrillFolder} />
         ))}
       </>
     );
@@ -130,7 +164,7 @@ function TreeRow({
         ...rowStyle,
         paddingLeft: indent + 16,
         color: selected ? 'var(--tx)' : 'var(--tx2)',
-        background: selected ? 'rgba(131,200,24,.12)' : 'transparent',
+        background: selected ? 'rgba(92,138,240,.14)' : 'transparent',
       }}
       onMouseOver={(e) => { if (!selected) e.currentTarget.style.background = 'rgba(255,255,255,.04)'; }}
       onMouseOut={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}

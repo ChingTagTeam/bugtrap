@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, GitBranch, RefreshCw, ShieldAlert, Check, Loader2 } from 'lucide-react';
 import type { ScanPhase, ScanMeta } from './useScanStream';
 import type { ProgressPayload, LensCounts, FileVerdict } from '@/lib/scan-types';
@@ -10,8 +11,8 @@ const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace";
 
 const AGENT_TEXT: Record<string, string> = {
   security: 'Security agent analyzing',
-  correctness: 'Correctness agent analyzing',
-  readability: 'Readability agent analyzing',
+  correctness: 'Bug agent analyzing',
+  readability: 'Bug agent analyzing',
   coordinator: 'Reconciling findings',
 };
 
@@ -45,7 +46,7 @@ export default function ReviewTopbar({
         alignItems: 'center',
         gap: 16,
         padding: '12px 18px',
-        background: 'rgba(29,29,32,.82)',
+        background: 'rgba(30,30,30,.82)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         borderBottom: '1px solid var(--line)',
@@ -70,6 +71,13 @@ export default function ReviewTopbar({
       >
         <ArrowLeft size={16} />
       </Link>
+
+      <Link href="/" aria-label="Sidecode home" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flex: 'none', textDecoration: 'none', color: 'var(--tx)' }}>
+        <Image src="/Sidecode-logo.png" alt="Sidecode" width={22} height={22} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+        <span className="bt-nav-name" style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-.025em' }}>Sidecode</span>
+      </Link>
+
+      <span style={{ width: 1, height: 20, background: 'var(--line)', flex: 'none' }} />
 
       <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -143,8 +151,8 @@ function LiveReadout({ progress, reducedMotion }: { progress: ProgressPayload | 
         gap: 12,
         padding: '7px 16px',
         borderRadius: 999,
-        background: 'rgba(131,200,24,.08)',
-        border: '1px solid rgba(131,200,24,.3)',
+        background: 'rgba(92,138,240,.08)',
+        border: '1px solid rgba(92,138,240,.3)',
         fontFamily: mono,
         fontSize: 12.5,
         maxWidth: '100%',
@@ -174,7 +182,9 @@ function VerdictGate({
   criticalCount: number;
 }) {
   const blocked = verdict === 'blocked';
-  const color = blocked ? 'var(--sec)' : 'var(--lime)';
+  // Verdict scale: safe → green, blocked → security red.
+  const color = blocked ? 'var(--sec)' : 'var(--safe)';
+  const bugTotal = totals.correctness + totals.readability;
   return (
     <div
       style={{
@@ -183,8 +193,8 @@ function VerdictGate({
         gap: 12,
         padding: '7px 8px 7px 16px',
         borderRadius: 999,
-        background: blocked ? 'rgba(255,93,108,.1)' : 'rgba(131,200,24,.1)',
-        border: `1px solid ${blocked ? 'rgba(255,93,108,.4)' : 'rgba(131,200,24,.4)'}`,
+        background: blocked ? 'rgba(242,109,120,.1)' : 'rgba(78,201,168,.1)',
+        border: `1px solid ${blocked ? 'rgba(242,109,120,.4)' : 'rgba(78,201,168,.4)'}`,
       }}
     >
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color, fontWeight: 800, fontSize: 13.5, letterSpacing: '.01em' }}>
@@ -193,8 +203,7 @@ function VerdictGate({
       </span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, paddingLeft: 12, borderLeft: '1px solid var(--line2)' }}>
         <LensDot color={LENS_COLOR.security} n={totals.security} />
-        <LensDot color={LENS_COLOR.correctness} n={totals.correctness} />
-        <LensDot color={LENS_COLOR.readability} n={totals.readability} />
+        <LensDot color={LENS_COLOR.correctness} n={bugTotal} />
       </span>
     </div>
   );

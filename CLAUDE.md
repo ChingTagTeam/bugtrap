@@ -57,10 +57,9 @@ Define success criteria. Loop until verified.
 - Before marking done, run `npx tsc --noEmit && npm run build` and confirm it's green.
 
 ## Project Rules
-**Brand tokens are fixed.** Fonts are Archivo (display) + JetBrains Mono (code/findings). Primary accent is lime `#83C818`. The CSS-variable block in `design/BugTrap-Landing.html` is the source of truth for all colors (`--sec #ff5d6c` security, `--cor #83C818` correctness, `--read #54b8ff` readability, surfaces, text). NEVER introduce new colors or fonts. See `design/DESIGN.md`.
+**Brand tokens are fixed.** Fonts are Red Hat Display (display) + JetBrains Mono (code/findings). Primary accent is indigo `#5C8AF0` (hover `#82A8F6`). Surfaces: bg/editor `#1E1E1E`, surface `#252526`, elevated `#2D2D30`, border `#3C3C3C`. Text: `#D4D4D4` / `#9D9D9D` / `#6E6E6E`. Findings (two agents): security gap `#F26D78`, bug `#E8A33D`. Verdict: safe `#4EC9A8`, warn `#E5C07B`, blocked `#F26D78`. Indigo is the only brand accent and never means a severity. NEVER introduce new colors or fonts. See `design/DESIGN.md`.
 
-**The landing page must match `design/BugTrap-Landing.html` exactly** — every section, all copy verbatim, all keyframes, the canvas background, and the full scanner state machine (READY → scanning → agent meters → findings rail → verdict gate). That HTML is a Claude Design export using `<x-dc>` / `support.js`; port its logic into React, never depend on `support.js`.
-
+**The landing page must match `design/Sidecode-Landing.html` exactly** — every section, all copy verbatim, all keyframes, the canvas background, and the full scanner state machine (READY → scanning → agent meters → findings rail → verdict gate). That HTML is a Claude Design export using `<x-dc>` / `support.js`; port its logic into React, never depend on `support.js`.
 **Next.js / React** — Functional components only. App Router (`src/app/`), never `pages/`. Server components by default; add `'use client'` only where needed (the scanner card and canvas are client components). Don't fetch data in `useEffect`. Clean up rAF loops and canvas listeners on unmount.
 
 **TypeScript** — strict mode. No `any`, no `!` non-null assertions, no `as` casts to silence errors. Explicit return types on exported functions.

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Loader2, AlertTriangle, FileSearch } from 'lucide-react';
+import { Loader2, AlertTriangle, FileSearch, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import GithubMark from '@/components/icons/GithubMark';
 import ReviewGraph from '@/components/review/ReviewGraph';
@@ -36,6 +36,7 @@ export default function ReviewPage() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [activeAgents, setActiveAgents] = useState<Set<AgentName>>(new Set(ALL_AGENTS));
   const [searchQuery, setSearchQuery] = useState('');
+  const [focusFolder, setFocusFolder] = useState<string | null>(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -148,6 +149,7 @@ export default function ReviewPage() {
             searchQuery={searchQuery}
             onSearch={setSearchQuery}
             onOpenFinding={onOpenFinding}
+            onDrillFolder={setFocusFolder}
             collapsed={panelCollapsed}
             onToggleCollapsed={() => setPanelCollapsed((c) => !c)}
           />
@@ -157,6 +159,13 @@ export default function ReviewPage() {
         <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
           {showGraph ? (
             <>
+              {focusFolder && (
+                <FolderBreadcrumb
+                  folder={focusFolder}
+                  onCrumb={(p) => setFocusFolder(p)}
+                  onBackToRepo={() => setFocusFolder(null)}
+                />
+              )}
               <ReviewGraph
                 graphData={scan.graphData}
                 paintVersion={scan.paintVersion}
@@ -164,6 +173,7 @@ export default function ReviewPage() {
                 selectedId={selection?.path ?? null}
                 activeAgents={activeAgents}
                 searchQuery={searchQuery}
+                focusFolder={focusFolder}
                 reducedMotion={reducedMotion}
                 scanning={scan.phase === 'scanning' || scan.phase === 'connecting'}
                 onHover={setHoveredId}
@@ -200,6 +210,94 @@ export default function ReviewPage() {
           />
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── drill-in breadcrumb ───────────────────────────────────────────── */
+
+function FolderBreadcrumb({
+  folder,
+  onCrumb,
+  onBackToRepo,
+}: {
+  folder: string;
+  onCrumb: (path: string) => void;
+  onBackToRepo: () => void;
+}) {
+  const parts = folder.split('/');
+  let acc = '';
+  const crumbs = parts.map((p) => {
+    acc = acc ? `${acc}/${p}` : p;
+    return { name: p, path: acc };
+  });
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        zIndex: 5,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '7px 11px',
+        borderRadius: 10,
+        background: 'rgba(37,37,38,.92)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        border: '1px solid var(--line)',
+        fontFamily: mono,
+        fontSize: 12,
+        maxWidth: 'calc(100% - 24px)',
+        overflow: 'hidden',
+      }}
+    >
+      <button
+        onClick={onBackToRepo}
+        title="Back to the full repository"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 5,
+          padding: '3px 7px',
+          borderRadius: 7,
+          border: '1px solid var(--line2)',
+          background: 'transparent',
+          color: 'var(--in)',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          fontSize: 11.5,
+          fontWeight: 600,
+          flex: 'none',
+        }}
+      >
+        <ArrowLeft size={12} /> repo
+      </button>
+      {crumbs.map((c, i) => (
+        <span key={c.path} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <ChevronRight size={12} style={{ color: 'var(--tx3)', flex: 'none' }} />
+          <button
+            onClick={() => onCrumb(c.path)}
+            disabled={i === crumbs.length - 1}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: i === crumbs.length - 1 ? 'var(--tx)' : 'var(--tx2)',
+              cursor: i === crumbs.length - 1 ? 'default' : 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 12,
+              fontWeight: i === crumbs.length - 1 ? 700 : 500,
+              padding: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {c.name}
+          </button>
+        </span>
+      ))}
     </div>
   );
 }
@@ -359,7 +457,7 @@ function SignInGate({ busy, error, onSignIn }: { busy: boolean; error: string | 
           alignItems: 'center',
           gap: 10,
           background: 'var(--lime)',
-          color: '#15150f',
+          color: '#0e1626',
           border: 'none',
           borderRadius: 11,
           padding: '14px 24px',
@@ -381,9 +479,9 @@ function SignInGate({ busy, error, onSignIn }: { busy: boolean; error: string | 
             maxWidth: 460,
             padding: '11px 14px',
             borderRadius: 10,
-            background: 'rgba(255,93,108,.08)',
-            border: '1px solid rgba(255,93,108,.3)',
-            color: '#ff8a95',
+            background: 'rgba(242,109,120,.08)',
+            border: '1px solid rgba(242,109,120,.3)',
+            color: '#f58b94',
             fontSize: 13,
             lineHeight: 1.5,
             textAlign: 'left',

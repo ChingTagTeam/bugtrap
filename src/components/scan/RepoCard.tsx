@@ -31,8 +31,8 @@ export default function RepoCard({ repo, onSelect }: { repo: RepoSummary; onSele
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.borderColor = 'rgba(131,200,24,.45)';
-        e.currentTarget.style.boxShadow = '0 22px 50px -30px rgba(131,200,24,.5)';
+        e.currentTarget.style.borderColor = 'rgba(92,138,240,.45)';
+        e.currentTarget.style.boxShadow = '0 22px 50px -30px rgba(92,138,240,.5)';
       }}
       onMouseOut={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
@@ -57,8 +57,8 @@ export default function RepoCard({ repo, onSelect }: { repo: RepoSummary; onSele
             padding: '3px 8px',
             borderRadius: 6,
             color: repo.private ? 'var(--high)' : 'var(--tx3)',
-            background: repo.private ? 'rgba(240,180,84,.1)' : 'rgba(255,255,255,.04)',
-            border: `1px solid ${repo.private ? 'rgba(240,180,84,.3)' : 'var(--line2)'}`,
+            background: repo.private ? 'rgba(229,192,123,.1)' : 'rgba(255,255,255,.04)',
+            border: `1px solid ${repo.private ? 'rgba(229,192,123,.3)' : 'var(--line2)'}`,
           }}
         >
           {repo.private ? <Lock size={10} strokeWidth={2.4} /> : null}

@@ -20,7 +20,7 @@ function hoverMarkdown(f: ScanFinding): string {
     '',
     f.message,
     '',
-    `_BugTrap ${LENS_LABEL[f.agent]} agent_`,
+    `_Sidecode ${LENS_LABEL[f.agent]} agent_`,
   ].join('\n');
 }
 
@@ -264,7 +264,7 @@ export default function CodePanel({
 
       {/* Patch description */}
       {showDiff && patch && (
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'rgba(131,200,24,.06)', fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.5 }}>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'rgba(92,138,240,.06)', fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.5 }}>
           <span style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--lime)', letterSpacing: '.08em' }}>SUGGESTED FIX · </span>
           {patch.description}
         </div>
@@ -327,7 +327,7 @@ export default function CodePanel({
           />
         )}
         {patchStatus === 'error' && !showDiff && (
-          <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12, padding: '10px 12px', borderRadius: 8, background: 'rgba(255,93,108,.1)', border: '1px solid rgba(255,93,108,.3)', color: '#ff8a95', fontFamily: mono, fontSize: 12 }}>
+          <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12, padding: '10px 12px', borderRadius: 8, background: 'rgba(242,109,120,.1)', border: '1px solid rgba(242,109,120,.3)', color: '#f58b94', fontFamily: mono, fontSize: 12 }}>
             Couldn&apos;t generate a fix. Try again.
           </div>
         )}

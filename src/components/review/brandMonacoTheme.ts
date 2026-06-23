@@ -1,40 +1,42 @@
 import type { Monaco } from '@monaco-editor/react';
 
-export const BRAND_THEME = 'bugtrap-dark';
+export const BRAND_THEME = 'sidecode-dark';
 
-/** Defines a Monaco theme matched to the BugTrap brand surfaces + lime accents. */
+/** Defines a Monaco theme matched to the Sidecode VS Code dark editor:
+ *  #1E1E1E surface, indigo accents, default-style syntax colors. */
 export function defineBrandTheme(monaco: Monaco): void {
   monaco.editor.defineTheme(BRAND_THEME, {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      { token: '', foreground: 'f2f2ef', background: '1d1d20' },
-      { token: 'comment', foreground: '6f6f76', fontStyle: 'italic' },
-      { token: 'keyword', foreground: 'a6f02e' },
-      { token: 'string', foreground: '83c818' },
-      { token: 'number', foreground: '54b8ff' },
-      { token: 'type', foreground: '54b8ff' },
-      { token: 'delimiter', foreground: 'a3a3a8' },
+      { token: '', foreground: 'd4d4d4', background: '1e1e1e' },
+      { token: 'comment', foreground: '6e6e6e', fontStyle: 'italic' },
+      { token: 'keyword', foreground: 'c586c0' },
+      { token: 'string', foreground: 'ce9178' },
+      { token: 'number', foreground: 'b5cea8' },
+      { token: 'type', foreground: '4ec9b0' },
+      { token: 'function', foreground: 'dcdcaa' },
+      { token: 'delimiter', foreground: '9d9d9d' },
     ],
     colors: {
-      'editor.background': '#1d1d20',
-      'editor.foreground': '#f2f2ef',
-      'editorGutter.background': '#1d1d20',
-      'editorLineNumber.foreground': '#4a4a50',
-      'editorLineNumber.activeForeground': '#83c818',
-      'editorCursor.foreground': '#83c818',
-      'editor.selectionBackground': '#83c81833',
-      'editor.inactiveSelectionBackground': '#83c81820',
+      'editor.background': '#1e1e1e',
+      'editor.foreground': '#d4d4d4',
+      'editorGutter.background': '#1e1e1e',
+      'editorLineNumber.foreground': '#45454c',
+      'editorLineNumber.activeForeground': '#5c8af0',
+      'editorCursor.foreground': '#5c8af0',
+      'editor.selectionBackground': '#5c8af033',
+      'editor.inactiveSelectionBackground': '#5c8af020',
       'editor.lineHighlightBackground': '#ffffff0a',
       'editorIndentGuide.background1': '#ffffff10',
       'editorIndentGuide.activeBackground1': '#ffffff22',
-      'scrollbarSlider.background': '#83c81822',
-      'scrollbarSlider.hoverBackground': '#83c81840',
-      'scrollbarSlider.activeBackground': '#83c81860',
-      'editorWidget.background': '#252529',
-      'editorWidget.border': '#ffffff14',
-      'editorHoverWidget.background': '#252529',
-      'editorHoverWidget.border': '#ffffff14',
+      'scrollbarSlider.background': '#5c8af022',
+      'scrollbarSlider.hoverBackground': '#5c8af040',
+      'scrollbarSlider.activeBackground': '#5c8af060',
+      'editorWidget.background': '#252526',
+      'editorWidget.border': '#3c3c3c',
+      'editorHoverWidget.background': '#252526',
+      'editorHoverWidget.border': '#3c3c3c',
       'editorOverviewRuler.border': '#00000000',
     },
   });
