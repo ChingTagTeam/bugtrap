@@ -74,4 +74,4 @@ Define success criteria. Loop until verified.
 
 **Secrets** — never commit or log API keys, tokens, or PII. Use env vars.
 
-**Git** — branch is `staging` unless told otherwise. Push with this exact format:
+**Git** — branch is `main` unless told otherwise. Push with this exact format:
