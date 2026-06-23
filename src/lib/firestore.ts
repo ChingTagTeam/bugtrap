@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDb } from './firebase-admin';
 import type { AgentReport, Verdict } from './types';
-import type { LensCounts, FileVerdict, ScanFinding, ScanStatus, StoredReview, StoredFile, PublicReviewData } from './scan-types';
+import type { LensCounts, FileVerdict, ScanFinding, ScanStatus, StoredReview, StoredFile, PublicReviewData, WebhookRecord } from './scan-types';
 
 /** Existing paste/PR review persistence — unchanged behavior. */
 export async function saveReview(
@@ -99,4 +99,40 @@ export async function finalizeScanReview(
     { ...result, finishedAt: FieldValue.serverTimestamp() },
     { merge: true }
   );
+}
+
+/* ── Webhook registration (server-only) ────────────────────────────── */
+
+function webhookDocId(owner: string, repo: string): string {
+  // Double-underscore separator: GitHub usernames cannot contain underscores,
+  // so owner__repo is unambiguous.
+  return `${owner}__${repo}`;
+}
+
+export async function registerWebhook(
+  uid: string,
+  owner: string,
+  repo: string,
+  webhookId: number,
+  secret: string,
+  branch: string
+): Promise<void> {
+  await getDb()
+    .collection('webhooks')
+    .doc(webhookDocId(owner, repo))
+    .set({ uid, owner, repo, webhookId, secret, branch, createdAt: FieldValue.serverTimestamp() });
+}
+
+export async function getWebhook(owner: string, repo: string): Promise<WebhookRecord | null> {
+  const snap = await getDb().collection('webhooks').doc(webhookDocId(owner, repo)).get();
+  return snap.exists ? (snap.data() as WebhookRecord) : null;
+}
+
+export async function deleteWebhook(owner: string, repo: string): Promise<void> {
+  await getDb().collection('webhooks').doc(webhookDocId(owner, repo)).delete();
+}
+
+export async function listUserWebhooks(uid: string): Promise<WebhookRecord[]> {
+  const snaps = await getDb().collection('webhooks').where('uid', '==', uid).get();
+  return snaps.docs.map((d) => d.data() as WebhookRecord);
 }

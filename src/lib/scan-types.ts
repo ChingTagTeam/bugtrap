@@ -139,3 +139,18 @@ export interface StoredFile {
 }
 
 export type { Severity, AgentName, Verdict };
+
+/* ── Webhook registration (server-only) ────────────────────────────── */
+
+/** Stored in Firestore webhooks/{owner}__{repo} — never client-readable. */
+export interface WebhookRecord {
+  uid: string;
+  owner: string;
+  repo: string;
+  /** GitHub numeric hook ID — needed to delete the hook via API. */
+  webhookId: number;
+  /** HMAC-SHA256 secret used to verify incoming payloads. */
+  secret: string;
+  branch: string;
+  createdAt: FirebaseFirestore.Timestamp;
+}
