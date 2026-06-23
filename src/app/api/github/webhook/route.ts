@@ -6,6 +6,14 @@ import { isReviewableSourceFile } from '@/lib/scan-filter';
 import { runScan } from '@/lib/scan-runner';
 
 export const runtime = 'nodejs';
+// Give the post-response scan the largest window the host allows. On Vercel the
+// after() work runs within this budget, so a big push must not exceed it.
+export const maxDuration = 300;
+
+// Webhook scans run inside the bounded after() window — cap the changed-file set
+// so a large push degrades gracefully (partial scan) instead of being killed
+// mid-run and leaving the review stuck in "scanning".
+const MAX_WEBHOOK_FILES = 40;
 
 // GitHub's HMAC-SHA256 signature is in the X-Hub-Signature-256 header.
 function verifySignature(rawBody: string, secret: string, sigHeader: string | null): boolean {
@@ -123,6 +131,14 @@ export async function POST(req: Request): Promise<Response> {
           .map((f) => f.filename)
           .filter((p) => isReviewableSourceFile(p, 1));
         if (onlyPaths.length === 0) return;
+      }
+
+      // Clamp to the per-scan cap so the after() window can't be exceeded.
+      if (onlyPaths && onlyPaths.length > MAX_WEBHOOK_FILES) {
+        console.warn(
+          `[webhook] ${owner}/${repo}: ${onlyPaths.length} changed files exceed cap; scanning first ${MAX_WEBHOOK_FILES}`
+        );
+        onlyPaths = onlyPaths.slice(0, MAX_WEBHOOK_FILES);
       }
 
       await runScan({

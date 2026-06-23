@@ -89,55 +89,51 @@ regardless of whether the fix is applied — the value may already be in git his
 
 ---
 
-## GitHub push-webhook scan (backend)
+## GitHub push-webhook scan (live companion)
 
-A standalone webhook server (`src/server.ts`) that scans every push to a connected
-repo through the same Secret Detector → Fix Agent pipeline and persists the result to
-Firestore. This is the backend for the live companion feature.
+A push to a connected repo auto-rescans **only the changed files** through the
+three-agent review pipeline and updates the review in Firestore. This is the
+backend for the live companion feature. It runs inside the Next.js app — there is
+no separate server.
 
 ### Flow
 
 ```
-GitHub push
-  → POST /webhook/github         verify HMAC (401 if bad) → ack 200 within ~10s
-  → [async] fetchChangedFiles    src/webhookFiles.ts  (added/modified, source files only)
-  → scanChangedFiles             src/scanRepo.ts      (detector → fix, 4 concurrent)
-  → persistPushScan              src/lib/scan-persist.ts
-  → log one-line summary
+GitHub push / PR (opened|synchronize)
+  → POST /api/github/webhook       verify HMAC (403 if bad) → ack 200 within ~10s
+  → [after()] collect changed paths   added + modified (push) / PR files; source files only
+                                      capped at MAX_WEBHOOK_FILES so the scan finishes in-window
+  → runScan({ onlyPaths })         src/lib/scan-runner.ts — security → {correctness ‖ readability}
+                                      → coordinator, 4 files concurrent, all on Vertex AI
+  → Firestore: reviews/{id} (+ files, findings)
 ```
+
+The webhook is registered per repo via `POST /api/github/webhook/register`
+(`src/app/api/github/webhook/register/route.ts`), which derives the callback URL
+from the request origin — so it works in preview and production without a
+`PUBLIC_URL` env var. Registration is idempotent and backs the connect-repo UI flow.
 
 ### Persistence
 
-- `scans/{commitSha}` — `{ repo, branch, commitSha, pushedAt, filesScanned, totals, verdict }`
-- `scans/{commitSha}/files/{id}` — `{ path, verdict, findings, fixes, error? }`
+Same schema as an interactive scan:
+- `reviews/{reviewId}` — `{ uid, owner, repo, branch, status, totals, verdict, truncated, … }`
+- `reviews/{reviewId}/files/{id}` and `reviews/{reviewId}/findings/{id}`
 
-Push **verdict** rolls up the per-file detector verdicts: `BLOCKED` if any file has a
-CRITICAL/HIGH finding, `WARN` if only MEDIUM/LOW, else `CLEAN`. Findings are stored exactly
-as the detector emits them — already redacted (`match_redacted`); no raw secret, token, or
-file content is ever logged or persisted.
-
-### Commands
-
-```bash
-npm run webhook                       # boot the server (src/server.ts)
-npm run webhook:register <owner> <repo>   # register/refresh the push webhook on a repo
-```
-
-`webhook:register` is idempotent — re-running updates the existing BugTrap hook instead of
-creating a duplicate. The same `registerRepoWebhook()` function backs the future UI
-connect-repo flow, so connecting a repo auto-registers its webhook.
+Verdict rolls up per-file: `blocked` if any file has a CRITICAL/HIGH finding, else `safe`.
+Findings are stored as the agents emit them; no raw secret or file content is logged.
 
 ### Environment
 
 | var | purpose |
 |---|---|
-| `GITHUB_WEBHOOK_SECRET` | HMAC secret shared with GitHub for signature verification |
-| `PUBLIC_URL` | externally reachable base URL; the hook target is `PUBLIC_URL + /webhook/github` |
-| `PORT` | optional, server port (defaults to `3001`) |
+| `GOOGLE_GENAI_USE_VERTEXAI`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | route all agent calls through Vertex AI |
+| `GOOGLE_APPLICATION_CREDENTIALS` | service-account JSON for Vertex auth (local only — on a managed host, attach a service account with `roles/aiplatform.user` and omit this) |
+| Firebase Admin (`FIREBASE_*`) | server-side Firestore writes |
+| GitHub token (per user, stored at `users/{uid}.githubToken`) | fetch changed files; no global webhook secret env var — each registered hook stores its own |
 
-Reused from the existing setup (not re-added): `GITHUB_TOKEN` (Octokit) and Firebase Admin
-via Application Default Credentials + `FIREBASE_PROJECT_ID`. Gemini auth uses **Vertex AI**
-(the existing `GOOGLE_*` vars) — this path does not use a Gemini API key.
+> **Deploy note (Vercel):** the post-ack scan runs in `after()` within the route's
+> `maxDuration` window. A large push is capped at `MAX_WEBHOOK_FILES` so it can't be
+> killed mid-scan. The runtime service account must have `roles/aiplatform.user`.
 
 ---
 

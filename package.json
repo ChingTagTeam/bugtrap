@@ -8,8 +8,6 @@
     "build": "cross-env NODE_OPTIONS=--experimental-require-module next build",
     "start": "cross-env NODE_OPTIONS=--experimental-require-module next start",
     "lint": "eslint",
-    "webhook": "npx tsx src/server.ts",
-    "webhook:register": "npx tsx scripts/registerWebhook.ts",
     "sft:data:security": "npx tsx scripts/prepare-security-dataset.ts",
     "sft:data:correctness": "npx tsx scripts/prepare-correctness-dataset.ts",
     "sft:data:readability": "npx tsx scripts/prepare-readability-dataset.ts",
