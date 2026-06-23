@@ -6,7 +6,7 @@ const writes: Array<{ path: string; data: Record<string, unknown> }> = [];
 function fakeDb() {
   const scanDoc = {
     set: async (data: Record<string, unknown>) => { writes.push({ path: 'scans/sha1', data }); },
-    collection: (_name: string) => ({ doc: () => ({ __fileDoc: true }) }),
+    collection: () => ({ doc: () => ({ __fileDoc: true }) }),
   };
   return {
     collection: (c: string) => ({ doc: (id: string) => { assert.equal(`${c}/${id}`, 'scans/sha1'); return scanDoc; } }),

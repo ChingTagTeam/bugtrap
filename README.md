@@ -89,6 +89,58 @@ regardless of whether the fix is applied — the value may already be in git his
 
 ---
 
+## GitHub push-webhook scan (backend)
+
+A standalone webhook server (`src/server.ts`) that scans every push to a connected
+repo through the same Secret Detector → Fix Agent pipeline and persists the result to
+Firestore. This is the backend for the live companion feature.
+
+### Flow
+
+```
+GitHub push
+  → POST /webhook/github         verify HMAC (401 if bad) → ack 200 within ~10s
+  → [async] fetchChangedFiles    src/webhookFiles.ts  (added/modified, source files only)
+  → scanChangedFiles             src/scanRepo.ts      (detector → fix, 4 concurrent)
+  → persistPushScan              src/lib/scan-persist.ts
+  → log one-line summary
+```
+
+### Persistence
+
+- `scans/{commitSha}` — `{ repo, branch, commitSha, pushedAt, filesScanned, totals, verdict }`
+- `scans/{commitSha}/files/{id}` — `{ path, verdict, findings, fixes, error? }`
+
+Push **verdict** rolls up the per-file detector verdicts: `BLOCKED` if any file has a
+CRITICAL/HIGH finding, `WARN` if only MEDIUM/LOW, else `CLEAN`. Findings are stored exactly
+as the detector emits them — already redacted (`match_redacted`); no raw secret, token, or
+file content is ever logged or persisted.
+
+### Commands
+
+```bash
+npm run webhook                       # boot the server (src/server.ts)
+npm run webhook:register <owner> <repo>   # register/refresh the push webhook on a repo
+```
+
+`webhook:register` is idempotent — re-running updates the existing BugTrap hook instead of
+creating a duplicate. The same `registerRepoWebhook()` function backs the future UI
+connect-repo flow, so connecting a repo auto-registers its webhook.
+
+### Environment
+
+| var | purpose |
+|---|---|
+| `GITHUB_WEBHOOK_SECRET` | HMAC secret shared with GitHub for signature verification |
+| `PUBLIC_URL` | externally reachable base URL; the hook target is `PUBLIC_URL + /webhook/github` |
+| `PORT` | optional, server port (defaults to `3001`) |
+
+Reused from the existing setup (not re-added): `GITHUB_TOKEN` (Octokit) and Firebase Admin
+via Application Default Credentials + `FIREBASE_PROJECT_ID`. Gemini auth uses **Vertex AI**
+(the existing `GOOGLE_*` vars) — this path does not use a Gemini API key.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
