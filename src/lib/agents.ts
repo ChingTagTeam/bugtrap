@@ -1,8 +1,28 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { getAI, MODEL, modelForAgent } from './gemini';
-import type { AgentName, AgentReport, Finding, Verdict, RankedFinding, Disagreement, PatchOutput } from './types';
+import type { AgentName, AgentReport, Finding, Verdict, RankedFinding, Disagreement, PatchOutput, Sensitivity } from './types';
 
 const AGENT_TIMEOUT_MS = 45_000;
 
+// ── Load agent system prompts from agents/ at first use ───────────────────────
+const _prompts: Record<string, string> = {};
+
+function loadPrompt(name: string): string {
+  if (!_prompts[name]) {
+    _prompts[name] = readFileSync(join(process.cwd(), 'agents', `${name}.md`), 'utf-8');
+  }
+  return _prompts[name];
+}
+
+// ── Sensitivity helper ────────────────────────────────────────────────────────
+function sensitivityDirective(sensitivity: Sensitivity): string {
+  return sensitivity === 'high_and_above'
+    ? 'SENSITIVITY: HIGH_AND_ABOVE\n'
+    : 'SENSITIVITY: ALL\n';
+}
+
+// ── Shared JSON schema for security + bug finding outputs ─────────────────────
 const FINDING_SCHEMA = {
   type: 'object',
   properties: {
@@ -24,17 +44,30 @@ const FINDING_SCHEMA = {
   required: ['findings'],
 };
 
-async function callAgent(prompt: string, agent?: AgentName): Promise<Finding[]> {
+// ── Core agent caller ─────────────────────────────────────────────────────────
+
+interface AgentCall {
+  systemInstruction: string;
+  userContent: string;
+  agent?: AgentName;
+  schema: object;
+}
+
+async function callAgent({ systemInstruction, userContent, agent, schema }: AgentCall): Promise<Finding[]> {
   const ai = getAI();
   const model = agent ? modelForAgent(agent) : MODEL;
+
   const response = await ai.models.generateContent({
     model,
-    contents: prompt,
+    contents: [{ role: 'user', parts: [{ text: userContent }] }],
     config: {
+      systemInstruction: { parts: [{ text: systemInstruction }] },
       responseMimeType: 'application/json',
-      responseSchema: FINDING_SCHEMA,
+      responseSchema: schema,
+      temperature: 0,
     },
   });
+
   try {
     const parsed = JSON.parse(response.text ?? '{"findings":[]}') as { findings: Finding[] };
     return parsed.findings ?? [];
@@ -52,18 +85,18 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export async function runSecurityAgent(code: string): Promise<AgentReport> {
-  const prompt = `You are a security code reviewer. Analyze the code for vulnerabilities: SQL injection, XSS, CSRF, auth flaws, exposed secrets, unsafe calls, input validation issues, cryptography misuse, path traversal, command injection.
+// ── Specialist agents ─────────────────────────────────────────────────────────
 
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFO"), confidence (0.0–1.0), type (snake_case e.g. "sql_injection"), message (clear explanation). Return {"findings":[]} if none.
-
-Code to review:
-\`\`\`
-${code}
-\`\`\``;
-
+export async function runSecurityAgent(
+  code: string,
+  sensitivity: Sensitivity = 'high_and_above'
+): Promise<AgentReport> {
+  const userContent = `${sensitivityDirective(sensitivity)}\n${code}`;
   try {
-    const findings = await withTimeout(callAgent(prompt, 'security'), AGENT_TIMEOUT_MS);
+    const findings = await withTimeout(
+      callAgent({ systemInstruction: loadPrompt('security'), userContent, agent: 'security', schema: FINDING_SCHEMA }),
+      AGENT_TIMEOUT_MS
+    );
     return { agent: 'security', findings };
   } catch (e) {
     console.warn('[agent:security] failed:', e instanceof Error ? e.message : e);
@@ -73,24 +106,20 @@ ${code}
 
 export async function runCorrectnessAgent(
   code: string,
-  securityFindings: Finding[]
+  securityFindings: Finding[],
+  sensitivity: Sensitivity = 'high_and_above'
 ): Promise<AgentReport> {
-  const securityContext =
+  const secContext =
     securityFindings.length > 0
-      ? `\nSecurity agent already flagged these issues — prioritize correctness issues on the same lines:\n${JSON.stringify(securityFindings, null, 2)}\n`
+      ? `\nSecurity agent already flagged these on the following lines — prioritize correctness issues on the same lines:\n${JSON.stringify(securityFindings, null, 2)}\n`
       : '';
 
-  const prompt = `You are a code correctness reviewer. Analyze the code for bugs and logic errors: null/undefined handling, off-by-one errors, race conditions, incorrect assumptions, missing error handling, infinite loops, wrong algorithm behavior, type errors.${securityContext}
-
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFO"), confidence (0.0–1.0), type (snake_case e.g. "null_deref"), message (clear explanation). Return {"findings":[]} if none.
-
-Code to review:
-\`\`\`
-${code}
-\`\`\``;
-
+  const userContent = `${sensitivityDirective(sensitivity)}${secContext}\n${code}`;
   try {
-    const findings = await withTimeout(callAgent(prompt, 'correctness'), AGENT_TIMEOUT_MS);
+    const findings = await withTimeout(
+      callAgent({ systemInstruction: loadPrompt('bugs'), userContent, agent: 'correctness', schema: FINDING_SCHEMA }),
+      AGENT_TIMEOUT_MS
+    );
     return { agent: 'correctness', findings };
   } catch (e) {
     console.warn('[agent:correctness] failed:', e instanceof Error ? e.message : e);
@@ -98,24 +127,32 @@ ${code}
   }
 }
 
-export async function runReadabilityAgent(code: string): Promise<AgentReport> {
-  const prompt = `You are a code readability reviewer. Analyze the code for readability issues: poor naming, magic numbers, overly complex functions, missing types, inconsistent style, unnecessary abstraction, poor structure, missing documentation for public APIs.
+export async function runReadabilityAgent(
+  code: string,
+  sensitivity: Sensitivity = 'high_and_above'
+): Promise<AgentReport> {
+  const READABILITY_PROMPT = `You are a senior software engineer reviewing code for readability. Identify issues that meaningfully hurt understanding or maintainability: confusing naming, missing types on public APIs, overly complex functions with no clear structure, dangerous anti-patterns.
 
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("HIGH"|"MEDIUM"|"LOW"|"INFO"), confidence (0.0–1.0), type (snake_case e.g. "poor_naming"), message (clear explanation). Return {"findings":[]} if none.
+Do NOT flag: code style (tabs vs spaces, bracket placement), personal naming preferences, or anything purely cosmetic. Only flag something a PR reviewer would block on, not bikeshed.
 
-Code to review:
-\`\`\`
-${code}
-\`\`\``;
+The user turn begins with a SENSITIVITY: directive — respect it exactly as the other agents do.
 
+Return JSON: {"findings":[{"line":null,"severity":"HIGH"|"MEDIUM"|"LOW"|"INFO","confidence":0.0,"type":"snake_case","message":"explanation"}]}`;
+
+  const userContent = `${sensitivityDirective(sensitivity)}\n${code}`;
   try {
-    const findings = await withTimeout(callAgent(prompt, 'readability'), AGENT_TIMEOUT_MS);
+    const findings = await withTimeout(
+      callAgent({ systemInstruction: READABILITY_PROMPT, userContent, agent: 'readability', schema: FINDING_SCHEMA }),
+      AGENT_TIMEOUT_MS
+    );
     return { agent: 'readability', findings };
   } catch (e) {
     console.warn('[agent:readability] failed:', e instanceof Error ? e.message : e);
     return { agent: 'readability', findings: [], degraded: true };
   }
 }
+
+// ── Coordinator ───────────────────────────────────────────────────────────────
 
 const VERDICT_SCHEMA = {
   type: 'object',
@@ -179,15 +216,16 @@ Return JSON:
 - safe: true only if zero CRITICAL or HIGH findings remain after deduplication
 - blockedOn: count of CRITICAL + HIGH findings in rankedFindings
 - summary: 1–2 sentence summary of code quality and key issues
-- rankedFindings: deduplicated, ranked array — include agent field (which agent caught it; pick the one with highest severity if multiple)
-- disagreements: array of cases where agents disagreed on severity for the same issue. Each entry: line, type, agents (array of who flagged it), severities (object keyed by agent name), coordinatorRuling, reason (your reasoning for the ruling)`;
+- rankedFindings: deduplicated, ranked — include agent field (pick the one with highest severity if multiple caught it)
+- disagreements: cases where agents disagreed on severity for the same issue`;
 
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       responseMimeType: 'application/json',
       responseSchema: VERDICT_SCHEMA,
+      temperature: 0,
     },
   });
 
@@ -214,6 +252,8 @@ Return JSON:
     };
   }
 }
+
+// ── Patch agent ───────────────────────────────────────────────────────────────
 
 const PATCH_SCHEMA = {
   type: 'object',
@@ -247,15 +287,15 @@ Return JSON:
 Rules:
 - Fix ALL listed issues
 - Keep the same language, style, and structure as the original
-- Do NOT add features or refactor beyond what is needed to fix the listed issues
-- If input was a diff, output the corrected versions of the changed sections`;
+- Do NOT add features or refactor beyond what is needed to fix the listed issues`;
 
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       responseMimeType: 'application/json',
       responseSchema: PATCH_SCHEMA,
+      temperature: 0,
     },
   });
 

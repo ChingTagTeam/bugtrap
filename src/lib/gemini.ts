@@ -15,19 +15,27 @@ function privateKey(): string {
  * filesystem makes the GOOGLE_APPLICATION_CREDENTIALS file path unreliable.
  */
 export function getAI(): GoogleGenAI {
-  if (!_ai) {
+  if (_ai) return _ai;
+
+  const useVertex =
+    process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true' ||
+    process.env.GOOGLE_GENAI_USE_ENTERPRISE === 'true';
+
+  if (useVertex) {
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const key = privateKey();
     _ai = new GoogleGenAI({
       vertexai: true,
       project: process.env.GOOGLE_CLOUD_PROJECT,
-      location: process.env.GOOGLE_CLOUD_LOCATION,
-      googleAuthOptions: {
-        credentials: {
-          client_email: process.env.FIREBASE_CLIENT_EMAIL,
-          private_key: privateKey(),
-        },
-      },
+      location: process.env.GOOGLE_CLOUD_LOCATION || 'us-central1',
+      ...(clientEmail && key
+        ? { googleAuthOptions: { credentials: { client_email: clientEmail, private_key: key } } }
+        : {}),
     });
+  } else {
+    _ai = new GoogleGenAI({});
   }
+
   return _ai;
 }
 
@@ -42,5 +50,5 @@ export const MODEL = 'gemini-2.5-flash';
  */
 export function modelForAgent(agent: AgentName): string {
   const key = `TUNED_MODEL_${agent.toUpperCase()}`;
-  return process.env[key] ?? MODEL;
+  return process.env[key] || MODEL;
 }

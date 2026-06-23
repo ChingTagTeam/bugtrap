@@ -1,5 +1,12 @@
 export type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
 export type AgentName = 'security' | 'correctness' | 'readability';
+
+/**
+ * Controls which severity levels agents emit.
+ * 'high_and_above' = only CRITICAL + HIGH (default — ignores nitpicks).
+ * 'all' = include MEDIUM and LOW as well (toggle in UI).
+ */
+export type Sensitivity = 'high_and_above' | 'all';
 export type AgentStatus = 'idle' | 'running' | 'complete' | 'error';
 
 export interface Finding {
