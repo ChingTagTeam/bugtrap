@@ -28,5 +28,10 @@ service cloud.firestore {
     match /users/{uid} {
       allow read, write: if false;
     }
+
+    // Webhook registrations hold HMAC secrets — never client-readable.
+    match /webhooks/{docId} {
+      allow read, write: if false;
+    }
   }
 }
