@@ -92,7 +92,8 @@ one-line summary (repo, short commit SHA, files scanned, findings count, verdict
     cursor pool), to stay under Gemini/Vertex rate limits.
   - Per file: `scanForSecrets(path, contents)`; if `findings.length > 0`, call
     `generateFixes(path, contents, findings)`, else `fixes = { fixes: [], summary: {...} }`.
-  - Returns `{ path, findings, fixes }` per file.
+  - Returns `{ path, verdict, findings, fixes }` per file, where `verdict` is the detector's
+    own `summary.verdict` for that file (persisted for the per-file UI breakdown).
   - Wrap each file in `try/catch`; on failure record `{ path, error: <message> }` and continue
     (graceful degradation — one failure never kills the batch). Never put file contents or raw
     secrets in the error string.
@@ -102,12 +103,16 @@ one-line summary (repo, short commit SHA, files scanned, findings count, verdict
 - `persistPushScan({ repo, branch, commitSha, results })`:
   - `scans/{commitSha}` ← `{ repo, branch, commitSha, pushedAt: serverTimestamp, filesScanned,
     totals, verdict }`.
-  - `scans/{commitSha}/files/{autoId}` ← `{ path, findings, fixes, error? }` (batched write).
+  - `scans/{commitSha}/files/{autoId}` ← `{ path, verdict, findings, fixes, error? }` (batched
+    write). `verdict` is that file's own detector verdict (the per-file breakdown the UI shows
+    under the push headline).
   - Uses `getDb()` (ADC). Reuses the FieldValue.serverTimestamp pattern from `firestore.ts`.
-- **Verdict / totals** (matches `agents/secret-detector-agent.md`): aggregate every file's
-  detector summary into `totals = { critical, high, medium, low }`. Verdict = `BLOCKED` if any
-  CRITICAL or HIGH; `WARN` if only MEDIUM/LOW; else `CLEAN`. Files that errored contribute
-  nothing to totals.
+- **Verdict / totals** (matches `agents/secret-detector-agent.md`):
+  - **Per file:** take the file's detector `summary.verdict` (`BLOCKED`/`WARN`/`CLEAN`),
+    stored on the file doc. An errored file has no verdict (or `error`).
+  - **Push-level (headline):** roll up — `BLOCKED` if any file is BLOCKED (any CRITICAL/HIGH);
+    `WARN` if only WARN; else `CLEAN`. `totals = { critical, high, medium, low }` summed across
+    files. Files that errored contribute nothing to totals.
 - Findings are already redacted (`match_redacted`) by the detector — stored as-is. No raw
   secret, token, file content, or the webhook secret is ever written or logged.
 
