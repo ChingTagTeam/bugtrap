@@ -18,12 +18,15 @@ type Status = 'loading' | 'ready' | 'error';
 type Visibility = 'all' | 'public' | 'private';
 
 export default function ScanPage() {
-  const { user, loading: authLoading, signInWithGitHub, signOutUser, error: authError } = useAuth();
+  const { user, loading: authLoading, signInWithGitHub, reconnectGitHub, signOutUser, error: authError } = useAuth();
   const router = useRouter();
 
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [status, setStatus] = useState<Status>('loading');
   const [error, setError] = useState<string | null>(null);
+  // True when the repos call failed because GitHub isn't connected (400/401) —
+  // distinct from a transient failure, so we offer reconnect rather than retry.
+  const [needsReconnect, setNeedsReconnect] = useState(false);
   const [search, setSearch] = useState('');
   const [visibility, setVisibility] = useState<Visibility>('all');
   const [lang, setLang] = useState('all');
@@ -40,15 +43,24 @@ export default function ScanPage() {
         const res = await authFetch('/api/github/repos');
         if (!res.ok) {
           const body: { error?: string } = await res.json().catch(() => ({}));
-          throw new Error(body.error ?? `Failed to load repositories (${res.status})`);
+          if (!cancelled) {
+            // 400 "not connected" or 401 "expired token" → the stored GitHub
+            // token is missing/stale; offer a reconnect instead of a bare retry.
+            setNeedsReconnect(res.status === 400 || res.status === 401);
+            setError(body.error ?? `Failed to load repositories (${res.status})`);
+            setStatus('error');
+          }
+          return;
         }
         const data: { repos: RepoSummary[] } = await res.json();
         if (!cancelled) {
           setRepos(data.repos);
+          setNeedsReconnect(false);
           setStatus('ready');
         }
       } catch (e) {
         if (!cancelled) {
+          setNeedsReconnect(false);
           setError(e instanceof Error ? e.message : 'Failed to load repositories');
           setStatus('error');
         }
@@ -136,14 +148,32 @@ export default function ScanPage() {
                 {status === 'error' && (
                   <CenterState>
                     <AlertTriangle size={26} color="var(--sec)" />
-                    <span style={{ color: 'var(--tx2)' }}>{error}</span>
-                    <RetryButton
-                      onClick={() => {
-                        setStatus('loading');
-                        setError(null);
-                        setReloadKey((k) => k + 1);
-                      }}
-                    />
+                    <span style={{ color: 'var(--tx2)' }}>
+                      {needsReconnect
+                        ? 'Your GitHub connection needs refreshing. Reconnect to load your repositories.'
+                        : error}
+                    </span>
+                    {needsReconnect ? (
+                      <ReconnectButton
+                        onClick={async () => {
+                          const ok = await reconnectGitHub();
+                          if (ok) {
+                            setStatus('loading');
+                            setError(null);
+                            setNeedsReconnect(false);
+                            setReloadKey((k) => k + 1);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <RetryButton
+                        onClick={() => {
+                          setStatus('loading');
+                          setError(null);
+                          setReloadKey((k) => k + 1);
+                        }}
+                      />
+                    )}
                   </CenterState>
                 )}
 
@@ -645,6 +675,29 @@ function RetryButton({ onClick }: { onClick: () => void }) {
       }}
     >
       <RefreshCw size={14} /> Try again
+    </button>
+  );
+}
+
+function ReconnectButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 9,
+        padding: '10px 18px',
+        borderRadius: 10,
+        background: 'rgba(92,138,240,.14)',
+        border: '1px solid rgba(92,138,240,.4)',
+        color: 'var(--lime)',
+        fontSize: 13.5,
+        fontWeight: 600,
+        cursor: 'pointer',
+      }}
+    >
+      <GithubMark size={15} /> Reconnect GitHub
     </button>
   );
 }

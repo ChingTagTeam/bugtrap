@@ -38,6 +38,26 @@ export async function GET(req: Request): Promise<Response> {
 
     return Response.json({ repos });
   } catch (err) {
+    // Surface the real cause in the server log — the client only sees the
+    // status. Octokit RequestError carries a numeric `status` from GitHub
+    // (401 = bad/expired token, 403 = scope/SAML/rate-limit).
+    const status = (err as { status?: number }).status;
+    console.error('[github/repos] failed', { status, err });
+    if (status === 401) {
+      return new Response(
+        JSON.stringify({ error: 'Your GitHub token is invalid or expired. Reconnect GitHub.' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    if (status === 403) {
+      return new Response(
+        JSON.stringify({
+          error:
+            'GitHub denied the request (missing scope, SAML org access, or rate limit). Reconnect GitHub and grant repo access.',
+        }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
     return errorResponse(err);
   }
 }

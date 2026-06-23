@@ -28,6 +28,13 @@ interface AuthContextValue {
   error: string | null;
   /** Resolves to the signed-in user, or null if it failed. */
   signInWithGitHub: () => Promise<User | null>;
+  /**
+   * Re-runs the GitHub OAuth popup to capture a fresh access token and
+   * re-store it server-side. Used to recover when the stored token is
+   * missing or stale (the repos call returns 400/401). Resolves to true
+   * when a fresh token was stored.
+   */
+  reconnectGitHub: () => Promise<boolean>;
   signOutUser: () => Promise<void>;
 }
 
@@ -47,37 +54,45 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     return unsubscribe;
   }, []);
 
+  // Sends the captured GitHub OAuth token to the server, which validates and
+  // stores it at users/{uid}.githubToken. Returns true on success; sets a
+  // user-facing error otherwise. The token never persists client-side.
+  const storeToken = useCallback(async (githubToken: string | undefined): Promise<boolean> => {
+    if (!githubToken) {
+      setError('GitHub did not return an access token. Try signing in again.');
+      return false;
+    }
+    try {
+      const res = await authFetch('/api/github/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ githubToken }),
+      });
+      if (res.ok) {
+        const data: { login?: string } = await res.json();
+        setGithubLogin(data.login ?? null);
+        return true;
+      }
+    } catch {
+      // fall through to the shared error below
+    }
+    setError('Signed in, but connecting your GitHub repos failed. Try again.');
+    return false;
+  }, []);
+
   const signInWithGitHub = useCallback(async (): Promise<User | null> => {
     setError(null);
     const provider = new GithubAuthProvider();
     provider.addScope('repo');
     provider.addScope('read:user');
+    // Force GitHub's authorize screen so the popup returns a fresh access
+    // token every time — without this, an already-signed-in Firebase session
+    // is restored with no GitHub credential and nothing can be stored.
+    provider.setCustomParameters({ prompt: 'consent' });
     try {
       const result = await signInWithPopup(getFirebaseAuth(), provider);
       const credential = GithubAuthProvider.credentialFromResult(result);
-      const githubToken = credential?.accessToken;
-
-      // Register the GitHub OAuth token server-side. It is never stored
-      // client-side beyond this call.
-      if (githubToken) {
-        try {
-          const res = await authFetch('/api/github/connect', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ githubToken }),
-          });
-          if (res.ok) {
-            const data: { login?: string } = await res.json();
-            setGithubLogin(data.login ?? null);
-          } else {
-            setError('Signed in, but connecting your GitHub repos failed. Try again.');
-          }
-        } catch {
-          setError('Signed in, but connecting your GitHub repos failed. Try again.');
-        }
-      } else {
-        setError('GitHub did not return an access token. Try signing in again.');
-      }
+      await storeToken(credential?.accessToken);
       return result.user;
     } catch (err) {
       const code = (err as { code?: string }).code ?? '';
@@ -100,7 +115,28 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
       }
       return null;
     }
-  }, []);
+  }, [storeToken]);
+
+  const reconnectGitHub = useCallback(async (): Promise<boolean> => {
+    setError(null);
+    const provider = new GithubAuthProvider();
+    provider.addScope('repo');
+    provider.addScope('read:user');
+    provider.setCustomParameters({ prompt: 'consent' });
+    try {
+      const result = await signInWithPopup(getFirebaseAuth(), provider);
+      const credential = GithubAuthProvider.credentialFromResult(result);
+      return await storeToken(credential?.accessToken);
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        return false; // user dismissed — leave the existing error state alone
+      }
+      console.error('GitHub reconnect failed:', err);
+      setError(`Reconnecting GitHub failed${code ? ` (${code})` : ''}. Please try again.`);
+      return false;
+    }
+  }, [storeToken]);
 
   const signOutUser = useCallback(async (): Promise<void> => {
     await signOut(getFirebaseAuth());
@@ -108,8 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, githubLogin, error, signInWithGitHub, signOutUser }),
-    [user, loading, githubLogin, error, signInWithGitHub, signOutUser]
+    () => ({ user, loading, githubLogin, error, signInWithGitHub, reconnectGitHub, signOutUser }),
+    [user, loading, githubLogin, error, signInWithGitHub, reconnectGitHub, signOutUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
