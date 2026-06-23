@@ -65,7 +65,8 @@ ${code}
   try {
     const findings = await withTimeout(callAgent(prompt, 'security'), AGENT_TIMEOUT_MS);
     return { agent: 'security', findings };
-  } catch {
+  } catch (e) {
+    console.warn('[agent:security] failed:', e instanceof Error ? e.message : e);
     return { agent: 'security', findings: [], degraded: true };
   }
 }
@@ -91,7 +92,8 @@ ${code}
   try {
     const findings = await withTimeout(callAgent(prompt, 'correctness'), AGENT_TIMEOUT_MS);
     return { agent: 'correctness', findings };
-  } catch {
+  } catch (e) {
+    console.warn('[agent:correctness] failed:', e instanceof Error ? e.message : e);
     return { agent: 'correctness', findings: [], degraded: true };
   }
 }
@@ -109,7 +111,8 @@ ${code}
   try {
     const findings = await withTimeout(callAgent(prompt, 'readability'), AGENT_TIMEOUT_MS);
     return { agent: 'readability', findings };
-  } catch {
+  } catch (e) {
+    console.warn('[agent:readability] failed:', e instanceof Error ? e.message : e);
     return { agent: 'readability', findings: [], degraded: true };
   }
 }

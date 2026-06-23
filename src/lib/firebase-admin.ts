@@ -1,4 +1,4 @@
-import { initializeApp, getApps, type App } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 
@@ -6,12 +6,18 @@ import { getAuth, type Auth } from 'firebase-admin/auth';
  * Single Firebase Admin app for all server-side code (Firestore + Auth).
  * Consolidates the init that previously lived inline in firestore.ts.
  *
- * We initialize with only the projectId and let the Admin SDK discover
- * Application Default Credentials (the same behavior the existing review
- * flow relies on). verifyIdToken works with just the projectId because it
- * validates against Google's public signing keys; Firestore writes use ADC.
+ * Credentials are passed explicitly via cert() from env vars (service-account
+ * client_email + private_key) rather than discovered from ADC, so Firestore
+ * writes authenticate on Vercel, which has no gcloud / ADC file. When those
+ * vars are absent we fall back to projectId-only init (ADC) — enough for
+ * verifyIdToken, which validates against Google's public signing keys.
  */
 let _app: App | null = null;
+
+// Vercel stores multi-line keys with literal "\n" — normalize to real newlines.
+function privateKey(): string {
+  return (process.env.FIREBASE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n');
+}
 
 function getApp(): App {
   if (_app) return _app;
@@ -20,9 +26,13 @@ function getApp(): App {
     _app = existing[0];
     return _app;
   }
-  _app = initializeApp({
-    projectId: process.env.FIREBASE_PROJECT_ID ?? process.env.GOOGLE_CLOUD_PROJECT,
-  });
+  const projectId = process.env.FIREBASE_PROJECT_ID ?? process.env.GOOGLE_CLOUD_PROJECT;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const key = privateKey();
+  _app =
+    clientEmail && key
+      ? initializeApp({ credential: cert({ projectId, clientEmail, privateKey: key }) })
+      : initializeApp({ projectId });
   return _app;
 }
 
