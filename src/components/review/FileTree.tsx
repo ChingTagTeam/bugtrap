@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, CornerDownRight } from 'lucide-react';
-import { fileTypeMeta } from '@/lib/file-icons';
-import { LENS_COLOR, type RFNode } from './graph-model';
+import { type RFNode } from './graph-model';
 
 const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace";
 
@@ -151,11 +150,10 @@ function TreeRow({
     );
   }
 
-  const meta = fileTypeMeta(entry.path);
-  const node = entry.node;
   const selected = selectedPath === entry.path;
-  const dotColor = node.worstAgent ? LENS_COLOR[node.worstAgent] : null;
 
+  // Plain rows: chevron-aligned indent + filename only. No type-label chips and
+  // no finding badges — those live on the graph nodes.
   return (
     <button
       onClick={() => onSelect(entry.path)}
@@ -169,35 +167,7 @@ function TreeRow({
       onMouseOver={(e) => { if (!selected) e.currentTarget.style.background = 'rgba(255,255,255,.04)'; }}
       onMouseOut={(e) => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
     >
-      <span
-        aria-hidden
-        style={{
-          flex: 'none',
-          minWidth: 26,
-          height: 15,
-          padding: '0 4px',
-          borderRadius: 4,
-          background: `${meta.color}22`,
-          color: meta.color,
-          border: `1px solid ${meta.color}55`,
-          fontFamily: mono,
-          fontSize: 8.5,
-          fontWeight: 700,
-          letterSpacing: '.02em',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {meta.label}
-      </span>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{entry.name}</span>
-      {node.findingCount > 0 && dotColor && (
-        <span style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor }} />
-          <span style={{ fontFamily: mono, fontSize: 11, color: 'var(--tx3)' }}>{node.findingCount}</span>
-        </span>
-      )}
     </button>
   );
 }

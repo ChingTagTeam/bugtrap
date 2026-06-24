@@ -9,6 +9,7 @@ import type {
 } from 'react-force-graph-2d';
 import { PALETTE, LENS_COLOR, type RFNode, type RFLink } from './graph-model';
 import { fileTypeMeta } from '@/lib/file-icons';
+import { logoFor, badgeIcon, folderIcon } from '@/lib/node-logos';
 import type { AgentName } from '@/lib/types';
 
 type GraphProps = ForceGraphProps<RFNode, RFLink> & {
@@ -55,6 +56,19 @@ export default function ReviewGraph({
   const [size, setSize] = useState({ w: 0, h: 0 });
   const userMoved = useRef(false);
   const lastFit = useRef(0);
+
+  // When a logo/badge bitmap finishes loading, nudge the engine so the cooled
+  // render loop repaints the node with its now-ready image. Throttled so a
+  // burst of loads coalesces into one reheat.
+  const repaintScheduled = useRef(false);
+  const requestRepaint = useRef(() => {
+    if (repaintScheduled.current) return;
+    repaintScheduled.current = true;
+    requestAnimationFrame(() => {
+      repaintScheduled.current = false;
+      fgRef.current?.d3ReheatSimulation();
+    });
+  });
 
   // Client-only dynamic import (the lib touches window). One boundary cast to
   // pin the generic component to our node/link types.
@@ -166,16 +180,53 @@ export default function ReviewGraph({
     return () => clearTimeout(t);
   }, [focusFolder, reducedMotion]);
 
-  // Gentle auto-fit while building, unless the user has taken control.
+  // Anchor the repo root at the graph origin so the cluster grows outward from
+  // the viewport center instead of drifting into a corner as nodes stream in.
   useEffect(() => {
-    if (userMoved.current) return;
-    const fg = fgRef.current;
-    if (!fg || graphData.nodes.length === 0) return;
-    const now = Date.now();
-    if (now - lastFit.current < 700) return;
-    lastFit.current = now;
-    fg.zoomToFit(reducedMotion ? 0 : 600, 120);
-  }, [graphData, reducedMotion]);
+    const root = graphData.nodes.find((n) => n.kind === 'root');
+    if (root) {
+      root.fx = 0;
+      root.fy = 0;
+    }
+  }, [graphData]);
+
+  // Keep the cluster framed in the CENTER as it grows. With only a handful of
+  // nodes their bounding box is tiny and near the origin, so zoomToFit would
+  // zoom in hugely (and read as "stuck in a corner"); in that case we instead
+  // center on the origin at a calm fixed zoom. Once the cluster is meaningfully
+  // sized we let zoomToFit frame it. Kept in a ref so the engine-tick callback
+  // and the node-change effect share one implementation that sees live props.
+  const nodeCountRef = useRef(0);
+  useEffect(() => {
+    nodeCountRef.current = graphData.nodes.length;
+  }, [graphData]);
+
+  const fitToCenter = useRef<(animate: boolean, force: boolean) => void>(() => {});
+  useEffect(() => {
+    fitToCenter.current = (animate: boolean, force: boolean) => {
+      if (userMoved.current) return;
+      const fg = fgRef.current;
+      if (!fg) return;
+      const now = Date.now();
+      if (!force && now - lastFit.current < 250) return;
+      lastFit.current = now;
+      const ms = animate && !reducedMotion ? 300 : 0;
+      if (nodeCountRef.current <= 3) {
+        // Too few to "fit" sensibly — hold the center at a comfortable zoom.
+        fg.centerAt(0, 0, ms);
+        fg.zoom(2.2, ms);
+      } else {
+        fg.zoomToFit(ms, 90);
+      }
+    };
+  }, [reducedMotion]);
+
+  // Fit immediately whenever the node set changes (covers the cooled-engine
+  // case where ticks have stopped but a new node arrived). Forces past the tick
+  // throttle so the final node never gets left off-center.
+  useEffect(() => {
+    if (graphData.nodes.length > 0) fitToCenter.current(true, true);
+  }, [graphData]);
 
   // Fly the camera to the selected node (covers selecting a search result or a
   // sidebar file): center on it and zoom in a touch.
@@ -195,13 +246,28 @@ export default function ReviewGraph({
     return false;
   }
 
-  // Returns the lens that should color a file's ring/badge given active filters.
-  function activeBadge(node: RFNode): { agent: AgentName; count: number } | null {
+  // Display lenses present on a node given active filters: a file can have a
+  // SECURITY finding AND a BUG finding, so both badges may show. (correctness +
+  // readability both fold into the "bug" display lens.)
+  function activeBadges(node: RFNode): { kind: 'security' | 'bug'; color: string }[] {
+    const out: { kind: 'security' | 'bug'; color: string }[] = [];
+    if (activeAgents.has('security') && node.counts.security > 0) {
+      out.push({ kind: 'security', color: LENS_COLOR.security });
+    }
+    const bugCount =
+      (activeAgents.has('correctness') ? node.counts.correctness : 0) +
+      (activeAgents.has('readability') ? node.counts.readability : 0);
+    if (bugCount > 0) out.push({ kind: 'bug', color: LENS_COLOR.correctness });
+    return out;
+  }
+
+  // The lens that colors the node ring/glow (worst active lens).
+  function ringLens(node: RFNode): { agent: AgentName } | null {
     let count = 0;
     for (const a of AGENTS) if (activeAgents.has(a)) count += node.counts[a];
     if (count === 0) return null;
-    if (node.worstAgent && activeAgents.has(node.worstAgent)) return { agent: node.worstAgent, count };
-    for (const a of AGENTS) if (activeAgents.has(a) && node.counts[a] > 0) return { agent: a, count };
+    if (node.worstAgent && activeAgents.has(node.worstAgent)) return { agent: node.worstAgent };
+    for (const a of AGENTS) if (activeAgents.has(a) && node.counts[a] > 0) return { agent: a };
     return null;
   }
 
@@ -238,11 +304,20 @@ export default function ReviewGraph({
       return;
     }
     if (node.kind === 'folder') {
-      // Folder hub: a small neutral node that forms the web.
+      // Folder hub: a small neutral node that forms the web, with a folder
+      // glyph at its center so directories read as directories at a glance.
+      const r = Math.max(node.radius, 7);
       ctx.beginPath();
-      ctx.arc(x, y, node.radius, 0, Math.PI * 2);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(157,157,157,0.30)';
       ctx.fill();
+
+      const folder = folderIcon(PALETTE.tx2, requestRepaint.current);
+      if (folder) {
+        const s = r * 1.5;
+        ctx.drawImage(folder, x - s / 2, y - s / 2, s, s);
+      }
+
       // Folder names appear once mildly zoomed (or hovered/selected) to avoid clutter.
       if ((scale > 1 || node.id === hoveredId || node.id === selectedId) && !dim) {
         drawLabel(node.label, PALETTE.tx2, 10);
@@ -255,32 +330,34 @@ export default function ReviewGraph({
     // The center always shows the STANDARD file-type icon (the language
     // short-code in its type color). Findings are shown only as the RING
     // color + corner badge; a clean, fully-scanned file washes to green.
-    const badge = activeBadge(node);
+    const ring = ringLens(node);
+    const badges = activeBadges(node);
+    const hasFinding = ring != null;
     const clean =
-      !badge && node.verdict === 'safe' && node.findingCount === 0;
-    const ringColor = badge
-      ? LENS_COLOR[badge.agent]
+      !hasFinding && node.verdict === 'safe' && node.findingCount === 0;
+    const ringColor = ring
+      ? LENS_COLOR[ring.agent]
       : clean
         ? PALETTE.safe
         : 'rgba(92,138,240,0.45)';
 
     // Glow.
     if (!dim) {
-      ctx.shadowColor = badge
+      ctx.shadowColor = hasFinding
         ? ringColor
         : clean
           ? 'rgba(78,201,168,0.55)'
           : 'rgba(92,138,240,0.55)';
-      ctx.shadowBlur = badge ? 16 : 8;
+      ctx.shadowBlur = hasFinding ? 16 : 8;
     }
     ctx.beginPath();
     ctx.arc(x, y, node.radius, 0, Math.PI * 2);
-    ctx.fillStyle = badge ? 'rgba(45,45,48,0.97)' : 'rgba(45,45,48,0.92)';
+    ctx.fillStyle = hasFinding ? 'rgba(45,45,48,0.97)' : 'rgba(45,45,48,0.92)';
     ctx.fill();
     ctx.shadowBlur = 0;
 
     // Ring (worst-severity / lens color; green when clear).
-    ctx.lineWidth = (badge ? 2 : 1) / scale;
+    ctx.lineWidth = (hasFinding ? 2 : 1) / scale;
     ctx.strokeStyle = ringColor;
     ctx.stroke();
 
@@ -295,42 +372,54 @@ export default function ReviewGraph({
       ctx.setLineDash([]);
     }
 
-    // File-type icon centered on the circle (standard type short-code).
+    // Center: the real language logo (devicon). Until the bitmap is ready (or
+    // for a type with no logo) fall back to the standard short-code glyph.
     if (!dim) {
-      const meta = fileTypeMeta(node.path);
-      const glyph = meta.label.length > 4 ? meta.label.slice(0, 4) : meta.label;
-      const maxByWidth = (node.radius * 1.5) / Math.max(1, glyph.length * 0.62);
-      const glyphSize = Math.min(node.radius * 0.95, maxByWidth);
-      ctx.font = `700 ${glyphSize}px ${getMono()}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = meta.color;
-      ctx.fillText(glyph, x, y + 0.5 / scale);
+      const logo = logoFor(node.path, requestRepaint.current);
+      if (logo) {
+        const s = node.radius * 1.25; // fit inside the circle
+        ctx.drawImage(logo, x - s / 2, y - s / 2, s, s);
+      } else {
+        const meta = fileTypeMeta(node.path);
+        const glyph = meta.label.length > 4 ? meta.label.slice(0, 4) : meta.label;
+        const maxByWidth = (node.radius * 1.5) / Math.max(1, glyph.length * 0.62);
+        const glyphSize = Math.min(node.radius * 0.95, maxByWidth);
+        ctx.font = `700 ${glyphSize}px ${getMono()}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = meta.color;
+        ctx.fillText(glyph, x, y + 0.5 / scale);
+      }
     }
 
-    // Finding badge (color = worst active lens, with count).
-    if (badge) {
+    // Finding badges: a security shield and/or a bug icon (NOT counts). When a
+    // file has both, the shield sits top-right and the bug sits top-left.
+    if (badges.length > 0 && !dim) {
       let pop = 1;
       if (scanning && !reducedMotion && node.lastFindingAt) {
         const dt = Date.now() - node.lastFindingAt;
         if (dt < 600) pop = 1 + 0.55 * (1 - dt / 600);
       }
-      const bx = x + node.radius * 0.78;
-      const by = y - node.radius * 0.78;
-      const br = Math.max(node.radius * 0.62, 4.5) * pop;
-      ctx.beginPath();
-      ctx.arc(bx, by, br, 0, Math.PI * 2);
-      ctx.fillStyle = LENS_COLOR[badge.agent];
-      ctx.fill();
-      ctx.lineWidth = 1.2 / scale;
-      ctx.strokeStyle = PALETTE.bg;
-      ctx.stroke();
-      const label = badge.count > 9 ? '9+' : String(badge.count);
-      ctx.font = `700 ${br * 1.15}px ${getMono()}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#1e1e1e';
-      ctx.fillText(label, bx, by + 0.5 / scale);
+      const br = Math.max(node.radius * 0.62, 5) * pop;
+      // Anchor angles: single → top-right; two → top-right + top-left.
+      const angles = badges.length === 1 ? [-Math.PI / 4] : [-Math.PI / 4, (-Math.PI * 3) / 4];
+      badges.forEach((b, i) => {
+        const ang = angles[i];
+        const bx = x + Math.cos(ang) * node.radius * 1.05;
+        const by = y + Math.sin(ang) * node.radius * 1.05;
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.fillStyle = b.color;
+        ctx.fill();
+        ctx.lineWidth = 1.2 / scale;
+        ctx.strokeStyle = PALETTE.bg;
+        ctx.stroke();
+        const icon = badgeIcon(b.kind, requestRepaint.current);
+        if (icon) {
+          const is = br * 1.25;
+          ctx.drawImage(icon, bx - is / 2, by - is / 2, is, is);
+        }
+      });
     }
 
     // File names show below the node at default zoom; always when active.
@@ -388,6 +477,11 @@ export default function ReviewGraph({
             userMoved.current = true;
           }}
           onBackgroundClick={() => onHover(null)}
+          onEngineTick={() => {
+            // Re-frame every simulation frame while building so the cluster
+            // stays centered and zooms out as nodes stream in (throttled).
+            if (scanning) fitToCenter.current(false, false);
+          }}
           onEngineStop={() => {
             // Frame the settled layout (unless the user has taken control).
             if (!userMoved.current) fgRef.current?.zoomToFit(reducedMotion ? 0 : 400, 120);

@@ -59,7 +59,6 @@ const SOURCE_EXT: Record<string, { language: string; label: string }> = {
   yaml: { language: 'yaml', label: 'YAML' },
   yml: { language: 'yaml', label: 'YAML' },
   toml: { language: 'ini', label: 'TOML' },
-  md: { language: 'markdown', label: 'Markdown' },
   dart: { language: 'dart', label: 'Dart' },
   lua: { language: 'lua', label: 'Lua' },
   r: { language: 'r', label: 'R' },

@@ -12,13 +12,17 @@ import {
   addScanFindings,
   finalizeScanReview,
 } from './firestore';
-import { runSecurityAgent, runCorrectnessAgent, runReadabilityAgent } from './agents';
+import { runSecurityAgent, runCorrectnessAgent } from './agents';
 import { isReviewableSourceFile } from './scan-filter';
 import type { AgentReport, Severity } from './types';
 import type { ScanFinding, LensCounts, FileVerdict } from './scan-types';
 
 export const MAX_FILES = 150;
-const CONCURRENCY = 4;
+// Each file runs two sequential Gemini calls (security → correctness). Keeping
+// file-level concurrency low bounds peak QPS against the Vertex quota; the
+// agents also retry on 429, but staying under the limit avoids the latency of
+// backoff. Bump this only if the project's quota is raised.
+const CONCURRENCY = 2;
 
 export type ScanSender = (event: string, data: unknown) => void;
 
@@ -40,17 +44,24 @@ function isBlocking(sev: Severity): boolean {
   return sev === 'CRITICAL' || sev === 'HIGH';
 }
 
+/** Only major issues are surfaced; agents may still leak a stray lower severity. */
+function isMajor(sev: Severity): boolean {
+  return sev === 'CRITICAL' || sev === 'HIGH';
+}
+
 function reportToFindings(path: string, report: AgentReport): ScanFinding[] {
-  return report.findings.map((f) => ({
-    path,
-    line: f.line ?? null,
-    endLine: f.line ?? null,
-    severity: f.severity,
-    agent: report.agent,
-    message: f.message,
-    confidence: f.confidence,
-    type: f.type,
-  }));
+  return report.findings
+    .filter((f) => isMajor(f.severity))
+    .map((f) => ({
+      path,
+      line: f.line ?? null,
+      endLine: f.line ?? null,
+      severity: f.severity,
+      agent: report.agent,
+      message: f.message,
+      confidence: f.confidence,
+      type: f.type,
+    }));
 }
 
 async function runPool<T>(
@@ -194,12 +205,9 @@ export async function runScan({
       const securityReport = await runSecurityAgent(content);
 
       send('progress', { scanned, total, agent: 'correctness', path: file.path });
-      const [correctnessReport, readabilityReport] = await Promise.all([
-        runCorrectnessAgent(content, securityReport.findings),
-        runReadabilityAgent(content),
-      ]);
+      const correctnessReport = await runCorrectnessAgent(content, securityReport.findings);
 
-      const reports: AgentReport[] = [securityReport, correctnessReport, readabilityReport];
+      const reports: AgentReport[] = [securityReport, correctnessReport];
       const fileFindings: ScanFinding[] = reports.flatMap((r) => reportToFindings(file.path, r));
 
       for (const finding of fileFindings) {
@@ -207,9 +215,9 @@ export async function runScan({
       }
 
       const counts: LensCounts = {
-        security: securityReport.findings.length,
-        correctness: correctnessReport.findings.length,
-        readability: readabilityReport.findings.length,
+        security: fileFindings.filter((f) => f.agent === 'security').length,
+        correctness: fileFindings.filter((f) => f.agent === 'correctness').length,
+        readability: 0,
       };
       const blocked = fileFindings.some((f) => isBlocking(f.severity));
       const verdict: FileVerdict = blocked ? 'blocked' : 'safe';

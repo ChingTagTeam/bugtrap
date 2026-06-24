@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Editor, DiffEditor, type Monaco, type OnMount } from '@monaco-editor/react';
-import { X, ExternalLink, Loader2, Wand2, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { X, ExternalLink, Loader2, Wand2, ArrowLeft, AlertTriangle, GitPullRequest, Check } from 'lucide-react';
 import { scanFetch } from '@/lib/api-client';
 import { inferLanguage } from '@/lib/scan-filter';
 import { LENS_COLOR, LENS_LABEL, SEVERITY_COLOR } from './graph-model';
@@ -54,6 +54,11 @@ export default function CodePanel({
   const [patch, setPatch] = useState<Patch | null>(null);
   const [patchStatus, setPatchStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [showDiff, setShowDiff] = useState(false);
+
+  // Open-PR flow for the current file's generated fix.
+  const [prStatus, setPrStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [prUrl, setPrUrl] = useState<string | null>(null);
+  const [prError, setPrError] = useState<string | null>(null);
 
   const editorRef = useRef<CodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -156,8 +161,37 @@ export default function CodePanel({
       setPatch(data);
       setPatchStatus('ready');
       setShowDiff(true);
+      setPrStatus('idle');
+      setPrUrl(null);
+      setPrError(null);
     } catch {
       setPatchStatus('error');
+    }
+  }
+
+  async function openPr(): Promise<void> {
+    if (!patch) return;
+    setPrStatus('loading');
+    setPrError(null);
+    try {
+      const res = await scanFetch(publicMode, '/api/open-pr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner,
+          repo,
+          branch,
+          description: patch.description,
+          files: [{ path, content: patch.fixedCode }],
+        }),
+      });
+      const data: { prUrl?: string; error?: string } = await res.json().catch(() => ({}));
+      if (!res.ok || !data.prUrl) throw new Error(data.error ?? 'Could not open a pull request');
+      setPrUrl(data.prUrl);
+      setPrStatus('done');
+    } catch (e) {
+      setPrError(e instanceof Error ? e.message : 'Could not open a pull request');
+      setPrStatus('error');
     }
   }
 
@@ -219,6 +253,30 @@ export default function CodePanel({
             <span className="bt-nav-name">Source</span>
           </button>
         )}
+        {showDiff && patch && !publicMode && (
+          prStatus === 'done' && prUrl ? (
+            <a
+              href={prUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ ...headerBtn, textDecoration: 'none', borderColor: 'var(--safe)', color: 'var(--safe)' }}
+              title="View the pull request on GitHub"
+            >
+              <Check size={14} />
+              <span className="bt-nav-name">PR opened</span>
+            </a>
+          ) : (
+            <button
+              onClick={() => void openPr()}
+              disabled={prStatus === 'loading'}
+              style={{ ...headerBtn, borderColor: 'var(--in)', color: 'var(--in)' }}
+              title="Commit this fix to a new branch and open a pull request"
+            >
+              {prStatus === 'loading' ? <Loader2 size={14} className="bt-spin" /> : <GitPullRequest size={14} />}
+              <span className="bt-nav-name">{prStatus === 'loading' ? 'Opening…' : 'Open PR'}</span>
+            </button>
+          )
+        )}
         <a href={githubUrl} target="_blank" rel="noreferrer" style={{ ...headerBtn, textDecoration: 'none' }} title="Open on GitHub">
           <ExternalLink size={14} />
           <span className="bt-nav-name">GitHub</span>
@@ -267,6 +325,16 @@ export default function CodePanel({
         <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'rgba(92,138,240,.06)', fontSize: 12.5, color: 'var(--tx2)', lineHeight: 1.5 }}>
           <span style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--lime)', letterSpacing: '.08em' }}>SUGGESTED FIX · </span>
           {patch.description}
+          {publicMode && (
+            <span style={{ display: 'block', marginTop: 6, fontFamily: mono, fontSize: 11, color: 'var(--tx3)' }}>
+              Sign in with GitHub to commit this fix as a pull request.
+            </span>
+          )}
+          {prStatus === 'error' && prError && (
+            <span style={{ display: 'block', marginTop: 6, fontFamily: mono, fontSize: 11, color: '#f58b94' }}>
+              {prError}
+            </span>
+          )}
         </div>
       )}
 

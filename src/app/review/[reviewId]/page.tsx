@@ -9,6 +9,7 @@ import ReviewGraph from '@/components/review/ReviewGraph';
 import ReviewTopbar from '@/components/review/ReviewTopbar';
 import ReviewSidePanel from '@/components/review/ReviewSidePanel';
 import CodePanel from '@/components/review/CodePanel';
+import FixAllBar from '@/components/review/FixAllBar';
 import { useScanStream } from '@/components/review/useScanStream';
 import type { RFNode } from '@/components/review/graph-model';
 import type { AgentName } from '@/lib/types';
@@ -183,6 +184,14 @@ export default function ReviewPage() {
               {scan.phase === 'error' && <ErrorOverlay message={scan.error} onBack={() => router.push('/scan')} />}
               {scan.phase === 'notfound' && <NotFoundOverlay onBack={() => router.push('/scan')} />}
               {scan.phase === 'done' && nodeCount === 0 && <EmptyOverlay />}
+              {scan.phase === 'done' && !scan.publicMode && scan.meta && scan.findings.length > 0 && !selection && (
+                <FixAllBar
+                  owner={scan.meta.owner}
+                  repo={scan.meta.repo}
+                  branch={scan.meta.branch}
+                  findings={scan.findings}
+                />
+              )}
             </>
           ) : (
             <MobileFindings

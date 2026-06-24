@@ -42,10 +42,11 @@ interface AgentState {
   errorMsg?: string;
 }
 
-const INITIAL_AGENTS: Record<AgentName, AgentState> = {
+// Only the security and correctness agents run; readability was retired so the
+// review surfaces only major (CRITICAL/HIGH) issues.
+const INITIAL_AGENTS: Partial<Record<AgentName, AgentState>> = {
   security: { status: 'idle', findings: [] },
   correctness: { status: 'idle', findings: [] },
-  readability: { status: 'idle', findings: [] },
 };
 
 export default function AppPage() {
@@ -54,7 +55,7 @@ export default function AppPage() {
   const [prUrl, setPrUrl] = useState('');
   const [scanning, setScanning] = useState(false);
   const [coordinatorRunning, setCoordinatorRunning] = useState(false);
-  const [agents, setAgents] = useState<Record<AgentName, AgentState>>(INITIAL_AGENTS);
+  const [agents, setAgents] = useState<Partial<Record<AgentName, AgentState>>>(INITIAL_AGENTS);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [patch, setPatch] = useState<PatchOutput | null>(null);
   const [patchLoading, setPatchLoading] = useState(false);

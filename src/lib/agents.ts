@@ -1,7 +1,7 @@
 import { getAI, MODEL, modelForAgent } from './gemini';
 import type { AgentName, AgentReport, Finding, Verdict, RankedFinding, Disagreement, PatchOutput } from './types';
 
-const AGENT_TIMEOUT_MS = 45_000;
+const AGENT_TIMEOUT_MS = 90_000;
 
 const FINDING_SCHEMA = {
   type: 'object',
@@ -24,22 +24,69 @@ const FINDING_SCHEMA = {
   required: ['findings'],
 };
 
+function isRateLimit(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('exhausted');
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * generateContent with bounded retry on Vertex 429 (RESOURCE_EXHAUSTED). The
+ * scan fans out enough concurrent calls to trip per-minute quota, which would
+ * otherwise silently degrade an agent to zero findings. Exponential backoff
+ * (with jitter) lets the call succeed once the window frees up.
+ */
+async function generateWithRetry(
+  ai: ReturnType<typeof getAI>,
+  model: string,
+  prompt: string,
+  label: string
+): Promise<string | null | undefined> {
+  const MAX_ATTEMPTS = 4;
+  let delay = 1500;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: { responseMimeType: 'application/json', responseSchema: FINDING_SCHEMA },
+      });
+      return response.text;
+    } catch (e) {
+      if (isRateLimit(e) && attempt < MAX_ATTEMPTS) {
+        const wait = delay + Math.floor(Math.random() * 500);
+        console.warn(`[agent:${label}] rate limited (attempt ${attempt}/${MAX_ATTEMPTS}); retrying in ${wait}ms`);
+        await sleep(wait);
+        delay *= 2;
+        continue;
+      }
+      throw e;
+    }
+  }
+  return undefined;
+}
+
 async function callAgent(prompt: string, agent?: AgentName): Promise<Finding[]> {
   const ai = getAI();
   const model = agent ? modelForAgent(agent) : MODEL;
-  const response = await ai.models.generateContent({
-    model,
-    contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: FINDING_SCHEMA,
-    },
-  });
+  const label = agent ?? 'agent';
+
+  const text = await generateWithRetry(ai, model, prompt, label);
+  // An empty/blocked response is a real failure, not "zero findings" — make it
+  // loud and let the caller mark the agent degraded instead of silently
+  // reporting a clean file.
+  if (!text || text.trim().length === 0) {
+    throw new Error(`[agent:${label}] empty response from model ${model}`);
+  }
+
   try {
-    const parsed = JSON.parse(response.text ?? '{"findings":[]}') as { findings: Finding[] };
+    const parsed = JSON.parse(text) as { findings?: Finding[] };
     return parsed.findings ?? [];
-  } catch {
-    return [];
+  } catch (e) {
+    throw new Error(
+      `[agent:${label}] could not parse JSON response: ${e instanceof Error ? e.message : e} — raw: ${text.slice(0, 200)}`
+    );
   }
 }
 
@@ -53,9 +100,22 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function runSecurityAgent(code: string): Promise<AgentReport> {
-  const prompt = `You are a security code reviewer. Analyze the code for vulnerabilities: SQL injection, XSS, CSRF, auth flaws, exposed secrets, unsafe calls, input validation issues, cryptography misuse, path traversal, command injection.
+  const prompt = `You are a senior security reviewer. Report ONLY serious, exploitable security vulnerabilities that a reviewer would block a merge on: SQL/NoSQL injection, command injection, path traversal, XSS, SSRF, auth/authorization bypass, hardcoded real secrets or credentials, unsafe deserialization, and broken cryptography.
 
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFO"), confidence (0.0–1.0), type (snake_case e.g. "sql_injection"), message (clear explanation). Return {"findings":[]} if none.
+Severity rules — only CRITICAL or HIGH findings are wanted:
+- CRITICAL: directly exploitable (e.g. user input concatenated into a SQL query or shell command).
+- HIGH: a real vulnerability or insecure pattern that needs a specific condition to exploit (e.g. a hardcoded credential, secret, API key, or private key in source).
+Do NOT emit MEDIUM, LOW, or INFO findings. If an issue is only MEDIUM or lower, omit it entirely.
+
+Hardcoded secrets: flag the PATTERN. A hardcoded credential / API key / token / private key in source is a finding regardless of whether the value is real, fake, an example, or a documented dummy — comments or READMEs claiming "this is just a test fixture" do NOT make it safe and do NOT suppress the finding. Report each distinct hardcoded secret once, on its own line.
+
+Hard exclusions — never report these:
+- Style, naming, formatting, magic numbers, var/let/const, missing semicolons, missing JSDoc/types, unused variables.
+- Speculation about what OTHER code might do, or vulnerabilities that depend on unseen functions.
+
+Deduplicate: one finding per distinct vulnerability. Do not restate the same issue twice with different wording. But each separate hardcoded secret (AWS key, GitHub token, DB password, etc.) is its own finding.
+
+Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"), confidence (0.0–1.0; only include findings you are at least 0.8 confident in), type (snake_case e.g. "sql_injection"), message (clear, specific explanation). Return {"findings":[]} if there are no serious vulnerabilities.
 
 Code to review:
 \`\`\`
@@ -80,9 +140,23 @@ export async function runCorrectnessAgent(
       ? `\nSecurity agent already flagged these issues — prioritize correctness issues on the same lines:\n${JSON.stringify(securityFindings, null, 2)}\n`
       : '';
 
-  const prompt = `You are a code correctness reviewer. Analyze the code for bugs and logic errors: null/undefined handling, off-by-one errors, race conditions, incorrect assumptions, missing error handling, infinite loops, wrong algorithm behavior, type errors.${securityContext}
+  const prompt = `You are a senior correctness reviewer. Report ONLY genuine bugs that would cause wrong output, a crash, or broken behavior at runtime: off-by-one / out-of-bounds access, null/undefined dereferences, unhandled promise rejections or missing await that breaks the result, race conditions, infinite loops, and clearly incorrect logic.${securityContext}
 
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"INFO"), confidence (0.0–1.0), type (snake_case e.g. "null_deref"), message (clear explanation). Return {"findings":[]} if none.
+Severity rules — only CRITICAL or HIGH findings are wanted:
+- CRITICAL: the code is certain to crash or produce wrong results on normal input.
+- HIGH: a real bug triggered by a specific but realistic input or condition.
+Do NOT emit MEDIUM, LOW, or INFO findings. If an issue is only MEDIUM or lower, omit it entirely.
+
+A missing \`await\` IS a real bug: if a value comes from a call that clearly returns a Promise (a DB query, fetch, async helper) and is used or returned without await, flag it — you do not need to see the called function's body when the call pattern makes the Promise obvious.
+
+Hard exclusions — never report these:
+- Style, naming, formatting, magic numbers, var/let/const, missing semicolons, missing JSDoc/types, unused variables, loose-vs-strict equality, "could be cleaner" suggestions.
+- Defensive nitpicks that are not actual bugs (e.g. "function could explicitly return false").
+- Pure speculation about unseen code where there is no in-file signal of a bug.
+
+Deduplicate: one finding per distinct bug.
+
+Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"), confidence (0.0–1.0; only include findings you are at least 0.7 confident in), type (snake_case e.g. "off_by_one"), message (clear, specific explanation). Return {"findings":[]} if there are no real bugs.
 
 Code to review:
 \`\`\`
@@ -95,25 +169,6 @@ ${code}
   } catch (e) {
     console.warn('[agent:correctness] failed:', e instanceof Error ? e.message : e);
     return { agent: 'correctness', findings: [], degraded: true };
-  }
-}
-
-export async function runReadabilityAgent(code: string): Promise<AgentReport> {
-  const prompt = `You are a code readability reviewer. Analyze the code for readability issues: poor naming, magic numbers, overly complex functions, missing types, inconsistent style, unnecessary abstraction, poor structure, missing documentation for public APIs.
-
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("HIGH"|"MEDIUM"|"LOW"|"INFO"), confidence (0.0–1.0), type (snake_case e.g. "poor_naming"), message (clear explanation). Return {"findings":[]} if none.
-
-Code to review:
-\`\`\`
-${code}
-\`\`\``;
-
-  try {
-    const findings = await withTimeout(callAgent(prompt, 'readability'), AGENT_TIMEOUT_MS);
-    return { agent: 'readability', findings };
-  } catch (e) {
-    console.warn('[agent:readability] failed:', e instanceof Error ? e.message : e);
-    return { agent: 'readability', findings: [], degraded: true };
   }
 }
 
@@ -165,7 +220,7 @@ export async function runCoordinatorAgent(reports: AgentReport[]): Promise<Verdi
       ? `\nNOTE: The following agents timed out and returned no findings: ${degradedAgents.join(', ')}. Note this gap in your summary.\n`
       : '';
 
-  const prompt = `You are a senior code review coordinator. Three specialist agents reviewed the code. Your job:
+  const prompt = `You are a senior code review coordinator. Specialist agents (security, correctness) reviewed the code and report only major (CRITICAL/HIGH) issues. Your job:
 1. Deduplicate overlapping findings (same issue caught by multiple agents — keep the most severe representation)
 2. Resolve severity conflicts: weight by confidence, lean conservative on security issues
 3. Rank all findings worst-first (CRITICAL → HIGH → MEDIUM → LOW → INFO)

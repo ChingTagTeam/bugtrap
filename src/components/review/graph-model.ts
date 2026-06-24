@@ -146,6 +146,14 @@ export function makeRootNode(repo: string): RFNode {
   };
 }
 
+/** Small spawn offset near the graph origin (viewport center) so streamed-in
+ *  nodes populate from the middle outward instead of piling at (0,0). */
+function spawnJitter(): { x: number; y: number } {
+  const a = Math.random() * Math.PI * 2;
+  const r = 8 + Math.random() * 24;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+}
+
 export function makeFolderNode(path: string, depth: number): RFNode {
   const label = path.slice(path.lastIndexOf('/') + 1);
   return {
@@ -162,6 +170,7 @@ export function makeFolderNode(path: string, depth: number): RFNode {
     worstAgent: null,
     verdict: 'safe',
     lastFindingAt: 0,
+    ...spawnJitter(),
   };
 }
 
@@ -180,6 +189,7 @@ export function makeFileNode(path: string, lines: number): RFNode {
     worstAgent: null,
     verdict: 'pending',
     lastFindingAt: 0,
+    ...spawnJitter(),
   };
 }
 

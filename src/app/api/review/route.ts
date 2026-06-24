@@ -1,7 +1,6 @@
 import {
   runSecurityAgent,
   runCorrectnessAgent,
-  runReadabilityAgent,
   runCoordinatorAgent,
   runPatchAgent,
 } from '@/lib/agents';
@@ -55,7 +54,7 @@ export async function POST(req: Request): Promise<Response> {
           send({ type: 'agent_complete', agent: 'security', findings: securityReport.findings });
         }
 
-        // Phase 2: correctness (with security context) + readability in parallel
+        // Phase 2: correctness, with security findings as context
         const runWithProgress = async (
           name: AgentName,
           fn: () => Promise<{ agent: AgentName; findings: Finding[]; degraded?: boolean }>
@@ -70,16 +69,13 @@ export async function POST(req: Request): Promise<Response> {
           return report;
         };
 
-        const [correctnessReport, readabilityReport] = await Promise.all([
-          runWithProgress('correctness', () =>
-            runCorrectnessAgent(code, securityReport.findings)
-          ),
-          runWithProgress('readability', () => runReadabilityAgent(code)),
-        ]);
+        const correctnessReport = await runWithProgress('correctness', () =>
+          runCorrectnessAgent(code, securityReport.findings)
+        );
 
         // Coordinator
         send({ type: 'coordinator_start' });
-        const verdict = await runCoordinatorAgent([securityReport, correctnessReport, readabilityReport]);
+        const verdict = await runCoordinatorAgent([securityReport, correctnessReport]);
         send({ type: 'verdict', verdict });
 
         // Patch agent (only if there are high/critical findings)
@@ -93,7 +89,7 @@ export async function POST(req: Request): Promise<Response> {
         // Save to Firestore
         const reviewId = await saveReview(
           code,
-          [securityReport, correctnessReport, readabilityReport],
+          [securityReport, correctnessReport],
           verdict
         );
         send({ type: 'saved', reviewId });
