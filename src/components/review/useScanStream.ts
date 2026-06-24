@@ -367,7 +367,24 @@ export function useScanStream(reviewId: string, ready: boolean, userPresent: boo
     const pending = pendingRef.current;
     if (pending) {
       const pub = Boolean(pending.public);
-      void runLiveScan({ owner: pending.owner, repo: pending.repo, branch: pending.branch ?? '' }, pub, controller.signal);
+      // After the one-shot SSE scan finishes, a watched review (signed-in,
+      // own repo) hands off to the live Firestore subscription so a later
+      // push-triggered rescan streams into this same open tab without a
+      // reload. Without this the scan tab goes inert once SSE closes and only
+      // a manual revisit picks up pushes. Public scans stay one-shot.
+      void runLiveScan(
+        { owner: pending.owner, repo: pending.repo, branch: pending.branch ?? '' },
+        pub,
+        controller.signal
+      ).then(() => {
+        if (controller.signal.aborted || pub || !userPresent) return;
+        const unsub = subscribePersisted();
+        // The effect's cleanup may have already run (unmount / dep change)
+        // before this late hand-off; if so, abort fired — tear down at once so
+        // the listeners don't leak. Otherwise expose it for normal cleanup.
+        if (controller.signal.aborted) unsub();
+        else unsubscribe = unsub;
+      });
     } else if (userPresent) {
       unsubscribe = subscribePersisted();
     } else {
