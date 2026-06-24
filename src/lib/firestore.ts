@@ -41,9 +41,31 @@ export async function getGithubToken(uid: string): Promise<string | null> {
 
 export async function createScanReview(
   reviewId: string,
-  params: { uid: string; owner: string; repo: string; branch: string; truncated: boolean; total: number; isPublic: boolean }
+  params: { uid: string; owner: string; repo: string; branch: string; truncated: boolean; total: number; isPublic: boolean },
+  incremental = false
 ): Promise<void> {
-  await getDb().collection('reviews').doc(reviewId).set({
+  const ref = getDb().collection('reviews').doc(reviewId);
+
+  if (incremental) {
+    // Push-driven rescan of an existing rolling review: flip status back to
+    // "scanning" and merge metadata, but preserve totals/verdict (recomputed at
+    // finalize) and the existing files/findings for untouched paths.
+    await ref.set(
+      {
+        uid: params.uid,
+        owner: params.owner,
+        repo: params.repo,
+        branch: params.branch,
+        status: 'scanning' satisfies ScanStatus,
+        public: params.isPublic,
+      },
+      { merge: true }
+    );
+    return;
+  }
+
+  // Full scan (interactive own-repo scan or first watch): fresh document.
+  await ref.set({
     uid: params.uid,
     owner: params.owner,
     repo: params.repo,
@@ -56,6 +78,31 @@ export async function createScanReview(
     public: params.isPublic,
     createdAt: FieldValue.serverTimestamp(),
   });
+}
+
+/** Read all stored file docs for a review — used to recompute rolling totals
+ *  after an incremental (push) scan touches only a subset of files. */
+export async function getScanFiles(reviewId: string): Promise<StoredFile[]> {
+  const snap = await getDb().collection('reviews').doc(reviewId).collection('files').get();
+  return snap.docs.map((d) => d.data() as StoredFile);
+}
+
+/** Delete all files + findings under a review. Used before a full rebuild so a
+ *  re-scan of a rolling review doesn't accumulate stale docs from prior scans. */
+export async function purgeScanContents(reviewId: string): Promise<void> {
+  const db = getDb();
+  const ref = db.collection('reviews').doc(reviewId);
+  const [files, findings] = await Promise.all([
+    ref.collection('files').get(),
+    ref.collection('findings').get(),
+  ]);
+  const docs = [...files.docs, ...findings.docs];
+  // Firestore batches cap at 500 ops — chunk to stay under the limit.
+  for (let i = 0; i < docs.length; i += 450) {
+    const batch = db.batch();
+    for (const d of docs.slice(i, i + 450)) batch.delete(d.ref);
+    await batch.commit();
+  }
 }
 
 /** Admin read of a full review (doc + files + findings). Used by the public
@@ -88,6 +135,36 @@ export async function addScanFindings(reviewId: string, findings: ScanFinding[])
   const col = db.collection('reviews').doc(reviewId).collection('findings');
   const batch = db.batch();
   for (const f of findings) batch.set(col.doc(), { ...f });
+  await batch.commit();
+}
+
+/**
+ * Incremental (push) upsert for a single file in a rolling review.
+ *
+ * Keys the file doc by a deterministic id derived from its path, so a re-push
+ * of the same file overwrites the prior entry instead of duplicating it. Then
+ * replaces just that path's findings: deletes any existing findings for the
+ * path, then writes the new set. Files NOT touched by the push are left intact,
+ * so the graph stays a living map of the whole repo (merge semantics).
+ */
+export async function upsertScanFile(
+  reviewId: string,
+  file: { path: string; size: number; lines: number; counts: LensCounts; verdict: FileVerdict },
+  findings: ScanFinding[]
+): Promise<void> {
+  const db = getDb();
+  const reviewRef = db.collection('reviews').doc(reviewId);
+
+  // Deterministic file-doc id from path (path chars unsafe for doc ids → encode).
+  const fileDocId = encodeURIComponent(file.path).replace(/\./g, '%2E');
+  await reviewRef.collection('files').doc(fileDocId).set(file);
+
+  // Replace this path's findings: clear old, then write new.
+  const findingsCol = reviewRef.collection('findings');
+  const stale = await findingsCol.where('path', '==', file.path).get();
+  const batch = db.batch();
+  for (const doc of stale.docs) batch.delete(doc.ref);
+  for (const f of findings) batch.set(findingsCol.doc(), { ...f });
   await batch.commit();
 }
 

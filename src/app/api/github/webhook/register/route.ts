@@ -46,8 +46,12 @@ export async function POST(req: Request): Promise<Response> {
       branch = repoData.default_branch;
     }
 
-    // Derive the webhook callback URL from the incoming request's origin.
-    const webhookUrl = new URL('/api/github/webhook', new URL(req.url).origin).toString();
+    // Pin the callback URL to the public production origin so a hook registered
+    // from a preview deploy (ephemeral domain, often behind Vercel Deployment
+    // Protection) still points at a stable, GitHub-reachable URL. Falls back to
+    // the request origin until WEBHOOK_PUBLIC_URL is set in the Vercel env.
+    const origin = process.env.WEBHOOK_PUBLIC_URL?.replace(/\/$/, '') ?? new URL(req.url).origin;
+    const webhookUrl = new URL('/api/github/webhook', origin).toString();
 
     // Generate a cryptographically random secret for payload signature verification.
     const secret = crypto.randomBytes(32).toString('hex');

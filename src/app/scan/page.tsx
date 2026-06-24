@@ -8,6 +8,7 @@ import { Search, LogOut, Loader2, Inbox, RefreshCw, AlertTriangle, ArrowRight } 
 import { useAuth } from '@/components/AuthProvider';
 import { authFetch } from '@/lib/api-client';
 import { parseRepoUrl } from '@/lib/repo-url';
+import { rollingReviewId } from '@/lib/review-id';
 import RepoCard from '@/components/scan/RepoCard';
 import GithubMark from '@/components/icons/GithubMark';
 import type { RepoSummary } from '@/lib/scan-types';
@@ -89,11 +90,28 @@ export default function ScanPage() {
   }, [repos, search, visibility, lang]);
 
   function goToReview(owner: string, repo: string, branch: string, isPublic: boolean): void {
-    const reviewId = crypto.randomUUID();
+    // Signed-in own-repo scans use the deterministic rolling-review id so this
+    // scan, future re-scans, and push-triggered rescans all share one document —
+    // and register a webhook so pushes flow into it. Public scans stay one-shot.
+    const watched = !isPublic && !!user;
+    const reviewId = watched ? rollingReviewId(user.uid, owner, repo, branch) : crypto.randomUUID();
+
     sessionStorage.setItem(
       `bugtrap:scan:${reviewId}`,
       JSON.stringify({ owner, repo, branch, public: isPublic })
     );
+
+    if (watched) {
+      // Fire-and-forget: registering the webhook must not block the scan, and a
+      // 403 (no admin/push access) just means pushes won't auto-rescan — the
+      // one-shot scan still works. Idempotent server-side (skips if registered).
+      void authFetch('/api/github/webhook/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner, repo, branch }),
+      }).catch(() => undefined);
+    }
+
     router.push(`/review/${reviewId}`);
   }
 

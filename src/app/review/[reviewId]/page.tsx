@@ -83,6 +83,9 @@ export default function ReviewPage() {
 
   const rescan = useCallback(() => {
     if (!scan.meta) return;
+    // Manual re-scan is a one-shot SSE scan into a fresh id (navigating to the
+    // same rolling id would be a no-op route change and never re-trigger the
+    // scan). Push-driven rescans keep the rolling review live on their own.
     const id = crypto.randomUUID();
     sessionStorage.setItem(
       `bugtrap:scan:${id}`,

@@ -10,6 +10,9 @@ import {
   createScanReview,
   addScanFile,
   addScanFindings,
+  upsertScanFile,
+  getScanFiles,
+  purgeScanContents,
   finalizeScanReview,
 } from './firestore';
 import { runSecurityAgent, runCorrectnessAgent } from './agents';
@@ -102,6 +105,10 @@ export async function runScan({
   let scanned = 0;
   let anyBlocked = false;
 
+  // Incremental (push) mode: merge changed files into an existing rolling review
+  // instead of rebuilding the whole graph. Driven by the webhook handler.
+  const incremental = Boolean(onlyPaths && onlyPaths.length > 0);
+
   // ── build the file list ───────────────────────────────────────────────────
   let files: { path: string; size: number }[];
   let truncated = false;
@@ -137,16 +144,28 @@ export async function runScan({
 
   const total = files.length;
 
-  await persist('createReview', () =>
-    createScanReview(reviewId, { uid, owner, repo, branch, truncated, total, isPublic })
-  );
+  if (incremental) {
+    // Reopen the rolling review for a partial rescan; preserve untouched files.
+    await persist('createReview', () =>
+      createScanReview(reviewId, { uid, owner, repo, branch, truncated, total, isPublic }, true)
+    );
+  } else {
+    // Full scan: clear any prior contents so a re-scan of a rolling review (same
+    // deterministic id) doesn't accumulate stale files/findings, then recreate.
+    await persist('purge', () => purgeScanContents(reviewId));
+    await persist('createReview', () =>
+      createScanReview(reviewId, { uid, owner, repo, branch, truncated, total, isPublic })
+    );
+  }
   send('review', { reviewId, owner, repo, branch, total, truncated, public: isPublic });
 
   if (total === 0) {
-    await persist('finalize', () =>
-      finalizeScanReview(reviewId, { status: 'done', totals, verdict: 'safe' })
-    );
-    send('verdict', { verdict: 'safe', totals });
+    if (!incremental) {
+      await persist('finalize', () =>
+        finalizeScanReview(reviewId, { status: 'done', totals, verdict: 'safe' })
+      );
+      send('verdict', { verdict: 'safe', totals });
+    }
     send('done', { reviewId });
     return;
   }
@@ -182,14 +201,15 @@ export async function runScan({
       send('node', { path: file.path, size: effectiveSize, lines });
 
       if (content.length === 0) {
+        const emptyFile = {
+          path: file.path,
+          size: effectiveSize,
+          lines,
+          counts: { security: 0, correctness: 0, readability: 0 },
+          verdict: 'safe' as FileVerdict,
+        };
         await persist('file', () =>
-          addScanFile(reviewId, {
-            path: file.path,
-            size: effectiveSize,
-            lines,
-            counts: { security: 0, correctness: 0, readability: 0 },
-            verdict: 'safe',
-          })
+          incremental ? upsertScanFile(reviewId, emptyFile, []) : addScanFile(reviewId, emptyFile)
         );
         send('fileVerdict', {
           path: file.path,
@@ -227,10 +247,13 @@ export async function runScan({
       totals.readability += counts.readability;
       if (blocked) anyBlocked = true;
 
-      await persist('file', () =>
-        addScanFile(reviewId, { path: file.path, size: effectiveSize, lines, counts, verdict })
-      );
-      await persist('findings', () => addScanFindings(reviewId, fileFindings));
+      const fileDoc = { path: file.path, size: effectiveSize, lines, counts, verdict };
+      if (incremental) {
+        await persist('file', () => upsertScanFile(reviewId, fileDoc, fileFindings));
+      } else {
+        await persist('file', () => addScanFile(reviewId, fileDoc));
+        await persist('findings', () => addScanFindings(reviewId, fileFindings));
+      }
 
       send('fileVerdict', { path: file.path, verdict, counts });
       scanned += 1;
@@ -246,10 +269,28 @@ export async function runScan({
     }
   });
 
-  const overall: FileVerdict = anyBlocked ? 'blocked' : 'safe';
+  let finalTotals = totals;
+  let overall: FileVerdict = anyBlocked ? 'blocked' : 'safe';
+
+  if (incremental) {
+    // Merge mode: the local accumulator only saw the pushed files. Recompute the
+    // rolling review's totals + verdict from ALL stored files so the verdict
+    // reflects the whole repo, not just what this push touched.
+    const all = await getScanFiles(reviewId).catch(() => []);
+    finalTotals = all.reduce<LensCounts>(
+      (acc, f) => ({
+        security: acc.security + f.counts.security,
+        correctness: acc.correctness + f.counts.correctness,
+        readability: acc.readability + f.counts.readability,
+      }),
+      { security: 0, correctness: 0, readability: 0 }
+    );
+    overall = all.some((f) => f.verdict === 'blocked') ? 'blocked' : 'safe';
+  }
+
   await persist('finalize', () =>
-    finalizeScanReview(reviewId, { status: 'done', totals, verdict: overall })
+    finalizeScanReview(reviewId, { status: 'done', totals: finalTotals, verdict: overall })
   );
-  send('verdict', { verdict: overall, totals });
+  send('verdict', { verdict: overall, totals: finalTotals });
   send('done', { reviewId });
 }

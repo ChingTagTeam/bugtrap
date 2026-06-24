@@ -1,9 +1,10 @@
-import crypto, { randomUUID } from 'crypto';
+import crypto from 'crypto';
 import { after } from 'next/server';
 import { getWebhook, getGithubToken, finalizeScanReview } from '@/lib/firestore';
 import { octokitForToken } from '@/lib/octokit';
 import { isReviewableSourceFile } from '@/lib/scan-filter';
 import { runScan } from '@/lib/scan-runner';
+import { rollingReviewId } from '@/lib/review-id';
 
 export const runtime = 'nodejs';
 // Give the post-response scan the largest window the host allows. On Vercel the
@@ -89,7 +90,11 @@ export async function POST(req: Request): Promise<Response> {
 
   // Respond to GitHub immediately (it times out after 10 s), then scan.
   after(async () => {
-    const reviewId = randomUUID();
+    // Push events feed the rolling review for the watched branch — the same
+    // deterministic id the viewer subscribes to, so the open graph updates live.
+    // PR events are not the watched-branch companion view, so they get their own
+    // throwaway id and don't pollute the rolling review.
+    let reviewId = rollingReviewId(webhook.uid, owner, repo, webhook.branch);
     let branch = webhook.branch;
     let onlyPaths: string[] | undefined;
 
@@ -115,6 +120,7 @@ export async function POST(req: Request): Promise<Response> {
         onlyPaths = [...changed].filter((p) => isReviewableSourceFile(p, 1));
         if (onlyPaths.length === 0) return;
       } else if (event === 'pull_request') {
+        reviewId = crypto.randomUUID();
         const pr = payload.pull_request as {
           number: number;
           head: { ref: string };

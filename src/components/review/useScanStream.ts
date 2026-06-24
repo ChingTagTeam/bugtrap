@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, collection, onSnapshot } from 'firebase/firestore';
 import { getClientDb } from '@/lib/firebase.client';
 import { scanFetch } from '@/lib/api-client';
 import { parseSSEStream } from '@/lib/sse';
@@ -136,8 +136,16 @@ export function useScanStream(reviewId: string, ready: boolean, userPresent: boo
       }
     };
 
-    // Build the settled graph from persisted data (authed revisit or public revisit).
+    // Build the graph from persisted data (authed revisit/live snapshot or
+    // public revisit). Idempotent: clears accumulators first, so a live
+    // onSnapshot can re-run it on every update (e.g. a push-triggered rescan)
+    // and rebuild the whole graph from the latest Firestore state.
     const buildFromStored = (review: StoredReview, files: StoredFile[], stored: ScanFinding[]): void => {
+      nodesById.current.clear();
+      links.current = [];
+      linkSet.current.clear();
+      findingsRef.current = [];
+
       ensureRoot(review.repo);
       for (const f of files) {
         const node = addFileNode(f.path, f.lines);
@@ -158,7 +166,9 @@ export function useScanStream(reviewId: string, ready: boolean, userPresent: boo
       publishGraph();
       setFindings(findingsRef.current.slice());
       setPaint((p) => p + 1);
-      setPhase('done');
+      // Reflect the stored status so a push-triggered rescan (status flips back
+      // to 'scanning') shows the scanning state live, then settles on 'done'.
+      setPhase(review.status === 'scanning' ? 'scanning' : review.status === 'error' ? 'error' : 'done');
     };
 
     /* ── Fresh scan over SSE ─────────────────────────────────────── */
@@ -250,30 +260,65 @@ export function useScanStream(reviewId: string, ready: boolean, userPresent: boo
       }
     };
 
-    /* ── Authed revisit (client Firestore, owner-scoped by rules) ── */
-    const loadPersisted = async (): Promise<void> => {
-      try {
-        const db = getClientDb();
-        const snap = await getDoc(doc(db, 'reviews', reviewId));
-        if (!snap.exists()) {
-          setPhase('notfound');
-          return;
-        }
-        const review = snap.data() as StoredReview;
-        const [filesSnap, findSnap] = await Promise.all([
-          getDocs(collection(db, 'reviews', reviewId, 'files')),
-          getDocs(collection(db, 'reviews', reviewId, 'findings')),
-        ]);
-        setPublicMode(Boolean(review.public));
-        buildFromStored(
-          review,
-          filesSnap.docs.map((d) => d.data() as StoredFile),
-          findSnap.docs.map((d) => d.data() as ScanFinding)
-        );
-      } catch (e) {
+    /* ── Authed revisit — LIVE (client Firestore, owner-scoped by rules) ──
+     * Three listeners (review doc + files + findings) fire independently. We
+     * cache the latest of each and rebuild the graph whenever any changes, once
+     * the review doc exists. This is what makes a push-triggered rescan stream
+     * into an already-open review without a reload. Returns an unsubscribe fn. */
+    const subscribePersisted = (): (() => void) => {
+      const db = getClientDb();
+      const reviewRef = doc(db, 'reviews', reviewId);
+      let latestReview: StoredReview | null = null;
+      let latestFiles: StoredFile[] = [];
+      let latestFindings: ScanFinding[] = [];
+      let reviewLoaded = false;
+
+      const rebuild = (): void => {
+        if (!latestReview) return;
+        setPublicMode(Boolean(latestReview.public));
+        buildFromStored(latestReview, latestFiles, latestFindings);
+      };
+
+      const onErr = (e: unknown): void => {
         setError(e instanceof Error ? e.message : 'Could not load this review');
         setPhase('error');
-      }
+      };
+
+      const unsubReview = onSnapshot(
+        reviewRef,
+        (snap) => {
+          if (!snap.exists()) {
+            setPhase('notfound');
+            return;
+          }
+          latestReview = snap.data() as StoredReview;
+          reviewLoaded = true;
+          rebuild();
+        },
+        onErr
+      );
+      const unsubFiles = onSnapshot(
+        collection(db, 'reviews', reviewId, 'files'),
+        (snap) => {
+          latestFiles = snap.docs.map((d) => d.data() as StoredFile);
+          if (reviewLoaded) rebuild();
+        },
+        onErr
+      );
+      const unsubFindings = onSnapshot(
+        collection(db, 'reviews', reviewId, 'findings'),
+        (snap) => {
+          latestFindings = snap.docs.map((d) => d.data() as ScanFinding);
+          if (reviewLoaded) rebuild();
+        },
+        onErr
+      );
+
+      return () => {
+        unsubReview();
+        unsubFiles();
+        unsubFindings();
+      };
     };
 
     /* ── Public revisit (server endpoint, public reviews only) ───── */
@@ -318,17 +363,21 @@ export function useScanStream(reviewId: string, ready: boolean, userPresent: boo
     }
 
     const controller = new AbortController();
+    let unsubscribe: (() => void) | null = null;
     const pending = pendingRef.current;
     if (pending) {
       const pub = Boolean(pending.public);
       void runLiveScan({ owner: pending.owner, repo: pending.repo, branch: pending.branch ?? '' }, pub, controller.signal);
     } else if (userPresent) {
-      void loadPersisted();
+      unsubscribe = subscribePersisted();
     } else {
       void loadPublic();
     }
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      unsubscribe?.();
+    };
   }, [ready, reviewId, userPresent]);
 
   return {
