@@ -1,8 +1,28 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { getAI, MODEL, modelForAgent } from './gemini';
-import type { AgentName, AgentReport, Finding, Verdict, RankedFinding, Disagreement, PatchOutput } from './types';
+import type { AgentName, AgentReport, Finding, Verdict, RankedFinding, Disagreement, PatchOutput, Sensitivity } from './types';
 
 const AGENT_TIMEOUT_MS = 90_000;
 
+// ── Load agent system prompts from agents/ at first use ───────────────────────
+const _prompts: Record<string, string> = {};
+
+function loadPrompt(name: string): string {
+  if (!_prompts[name]) {
+    _prompts[name] = readFileSync(join(process.cwd(), 'agents', `${name}.md`), 'utf-8');
+  }
+  return _prompts[name];
+}
+
+// ── Sensitivity helper ────────────────────────────────────────────────────────
+function sensitivityDirective(sensitivity: Sensitivity): string {
+  return sensitivity === 'high_and_above'
+    ? 'SENSITIVITY: HIGH_AND_ABOVE\n'
+    : 'SENSITIVITY: ALL\n';
+}
+
+// ── Shared JSON schema for security + bug finding outputs ─────────────────────
 const FINDING_SCHEMA = {
   type: 'object',
   properties: {
@@ -24,6 +44,8 @@ const FINDING_SCHEMA = {
   required: ['findings'],
 };
 
+// ── Core agent caller ─────────────────────────────────────────────────────────
+
 function isRateLimit(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
   return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('exhausted');
@@ -31,28 +53,41 @@ function isRateLimit(e: unknown): boolean {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+interface AgentCall {
+  systemInstruction: string;
+  userContent: string;
+  agent?: AgentName;
+  schema: object;
+}
+
 /**
- * generateContent with bounded retry on Vertex 429 (RESOURCE_EXHAUSTED). The
- * scan fans out enough concurrent calls to trip per-minute quota, which would
- * otherwise silently degrade an agent to zero findings. Exponential backoff
- * (with jitter) lets the call succeed once the window frees up.
+ * Calls a specialist agent with bounded retry on Vertex 429 (RESOURCE_EXHAUSTED).
+ * The scan fans out enough concurrent calls to trip per-minute quota, which would
+ * otherwise silently degrade an agent to zero findings. Exponential backoff (with
+ * jitter) lets the call succeed once the window frees up.
  */
-async function generateWithRetry(
-  ai: ReturnType<typeof getAI>,
-  model: string,
-  prompt: string,
-  label: string
-): Promise<string | null | undefined> {
+async function callAgent({ systemInstruction, userContent, agent, schema }: AgentCall): Promise<Finding[]> {
+  const ai = getAI();
+  const model = agent ? modelForAgent(agent) : MODEL;
+  const label = agent ?? 'agent';
+
   const MAX_ATTEMPTS = 4;
   let delay = 1500;
+  let text: string | null | undefined;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: prompt,
-        config: { responseMimeType: 'application/json', responseSchema: FINDING_SCHEMA },
+        contents: [{ role: 'user', parts: [{ text: userContent }] }],
+        config: {
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: 0,
+        },
       });
-      return response.text;
+      text = response.text;
+      break;
     } catch (e) {
       if (isRateLimit(e) && attempt < MAX_ATTEMPTS) {
         const wait = delay + Math.floor(Math.random() * 500);
@@ -64,15 +99,7 @@ async function generateWithRetry(
       throw e;
     }
   }
-  return undefined;
-}
 
-async function callAgent(prompt: string, agent?: AgentName): Promise<Finding[]> {
-  const ai = getAI();
-  const model = agent ? modelForAgent(agent) : MODEL;
-  const label = agent ?? 'agent';
-
-  const text = await generateWithRetry(ai, model, prompt, label);
   // An empty/blocked response is a real failure, not "zero findings" — make it
   // loud and let the caller mark the agent degraded instead of silently
   // reporting a clean file.
@@ -99,31 +126,18 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export async function runSecurityAgent(code: string): Promise<AgentReport> {
-  const prompt = `You are a senior security reviewer. Report ONLY serious, exploitable security vulnerabilities that a reviewer would block a merge on: SQL/NoSQL injection, command injection, path traversal, XSS, SSRF, auth/authorization bypass, hardcoded real secrets or credentials, unsafe deserialization, and broken cryptography.
+// ── Specialist agents ─────────────────────────────────────────────────────────
 
-Severity rules — only CRITICAL or HIGH findings are wanted:
-- CRITICAL: directly exploitable (e.g. user input concatenated into a SQL query or shell command).
-- HIGH: a real vulnerability or insecure pattern that needs a specific condition to exploit (e.g. a hardcoded credential, secret, API key, or private key in source).
-Do NOT emit MEDIUM, LOW, or INFO findings. If an issue is only MEDIUM or lower, omit it entirely.
-
-Hardcoded secrets: flag the PATTERN. A hardcoded credential / API key / token / private key in source is a finding regardless of whether the value is real, fake, an example, or a documented dummy — comments or READMEs claiming "this is just a test fixture" do NOT make it safe and do NOT suppress the finding. Report each distinct hardcoded secret once, on its own line.
-
-Hard exclusions — never report these:
-- Style, naming, formatting, magic numbers, var/let/const, missing semicolons, missing JSDoc/types, unused variables.
-- Speculation about what OTHER code might do, or vulnerabilities that depend on unseen functions.
-
-Deduplicate: one finding per distinct vulnerability. Do not restate the same issue twice with different wording. But each separate hardcoded secret (AWS key, GitHub token, DB password, etc.) is its own finding.
-
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"), confidence (0.0–1.0; only include findings you are at least 0.8 confident in), type (snake_case e.g. "sql_injection"), message (clear, specific explanation). Return {"findings":[]} if there are no serious vulnerabilities.
-
-Code to review:
-\`\`\`
-${code}
-\`\`\``;
-
+export async function runSecurityAgent(
+  code: string,
+  sensitivity: Sensitivity = 'high_and_above'
+): Promise<AgentReport> {
+  const userContent = `${sensitivityDirective(sensitivity)}\n${code}`;
   try {
-    const findings = await withTimeout(callAgent(prompt, 'security'), AGENT_TIMEOUT_MS);
+    const findings = await withTimeout(
+      callAgent({ systemInstruction: loadPrompt('security'), userContent, agent: 'security', schema: FINDING_SCHEMA }),
+      AGENT_TIMEOUT_MS
+    );
     return { agent: 'security', findings };
   } catch (e) {
     console.warn('[agent:security] failed:', e instanceof Error ? e.message : e);
@@ -133,44 +147,28 @@ ${code}
 
 export async function runCorrectnessAgent(
   code: string,
-  securityFindings: Finding[]
+  securityFindings: Finding[],
+  sensitivity: Sensitivity = 'high_and_above'
 ): Promise<AgentReport> {
-  const securityContext =
+  const secContext =
     securityFindings.length > 0
-      ? `\nSecurity agent already flagged these issues — prioritize correctness issues on the same lines:\n${JSON.stringify(securityFindings, null, 2)}\n`
+      ? `\nSecurity agent already flagged these on the following lines — prioritize correctness issues on the same lines:\n${JSON.stringify(securityFindings, null, 2)}\n`
       : '';
 
-  const prompt = `You are a senior correctness reviewer. Report ONLY genuine bugs that would cause wrong output, a crash, or broken behavior at runtime: off-by-one / out-of-bounds access, null/undefined dereferences, unhandled promise rejections or missing await that breaks the result, race conditions, infinite loops, and clearly incorrect logic.${securityContext}
-
-Severity rules — only CRITICAL or HIGH findings are wanted:
-- CRITICAL: the code is certain to crash or produce wrong results on normal input.
-- HIGH: a real bug triggered by a specific but realistic input or condition.
-Do NOT emit MEDIUM, LOW, or INFO findings. If an issue is only MEDIUM or lower, omit it entirely.
-
-A missing \`await\` IS a real bug: if a value comes from a call that clearly returns a Promise (a DB query, fetch, async helper) and is used or returned without await, flag it — you do not need to see the called function's body when the call pattern makes the Promise obvious.
-
-Hard exclusions — never report these:
-- Style, naming, formatting, magic numbers, var/let/const, missing semicolons, missing JSDoc/types, unused variables, loose-vs-strict equality, "could be cleaner" suggestions.
-- Defensive nitpicks that are not actual bugs (e.g. "function could explicitly return false").
-- Pure speculation about unseen code where there is no in-file signal of a bug.
-
-Deduplicate: one finding per distinct bug.
-
-Return JSON with a "findings" array. Each finding: line (integer or null), severity ("CRITICAL"|"HIGH"), confidence (0.0–1.0; only include findings you are at least 0.7 confident in), type (snake_case e.g. "off_by_one"), message (clear, specific explanation). Return {"findings":[]} if there are no real bugs.
-
-Code to review:
-\`\`\`
-${code}
-\`\`\``;
-
+  const userContent = `${sensitivityDirective(sensitivity)}${secContext}\n${code}`;
   try {
-    const findings = await withTimeout(callAgent(prompt, 'correctness'), AGENT_TIMEOUT_MS);
+    const findings = await withTimeout(
+      callAgent({ systemInstruction: loadPrompt('bugs'), userContent, agent: 'correctness', schema: FINDING_SCHEMA }),
+      AGENT_TIMEOUT_MS
+    );
     return { agent: 'correctness', findings };
   } catch (e) {
     console.warn('[agent:correctness] failed:', e instanceof Error ? e.message : e);
     return { agent: 'correctness', findings: [], degraded: true };
   }
 }
+
+// ── Coordinator ───────────────────────────────────────────────────────────────
 
 const VERDICT_SCHEMA = {
   type: 'object',
@@ -234,15 +232,16 @@ Return JSON:
 - safe: true only if zero CRITICAL or HIGH findings remain after deduplication
 - blockedOn: count of CRITICAL + HIGH findings in rankedFindings
 - summary: 1–2 sentence summary of code quality and key issues
-- rankedFindings: deduplicated, ranked array — include agent field (which agent caught it; pick the one with highest severity if multiple)
-- disagreements: array of cases where agents disagreed on severity for the same issue. Each entry: line, type, agents (array of who flagged it), severities (object keyed by agent name), coordinatorRuling, reason (your reasoning for the ruling)`;
+- rankedFindings: deduplicated, ranked — include agent field (pick the one with highest severity if multiple caught it)
+- disagreements: cases where agents disagreed on severity for the same issue`;
 
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       responseMimeType: 'application/json',
       responseSchema: VERDICT_SCHEMA,
+      temperature: 0,
     },
   });
 
@@ -269,6 +268,8 @@ Return JSON:
     };
   }
 }
+
+// ── Patch agent ───────────────────────────────────────────────────────────────
 
 const PATCH_SCHEMA = {
   type: 'object',
@@ -302,15 +303,15 @@ Return JSON:
 Rules:
 - Fix ALL listed issues
 - Keep the same language, style, and structure as the original
-- Do NOT add features or refactor beyond what is needed to fix the listed issues
-- If input was a diff, output the corrected versions of the changed sections`;
+- Do NOT add features or refactor beyond what is needed to fix the listed issues`;
 
   const response = await ai.models.generateContent({
     model: MODEL,
-    contents: prompt,
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
     config: {
       responseMimeType: 'application/json',
       responseSchema: PATCH_SCHEMA,
+      temperature: 0,
     },
   });
 

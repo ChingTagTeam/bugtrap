@@ -17,7 +17,7 @@ import {
 } from './firestore';
 import { runSecurityAgent, runCorrectnessAgent } from './agents';
 import { isReviewableSourceFile } from './scan-filter';
-import type { AgentReport, Severity } from './types';
+import type { AgentReport, Severity, Sensitivity } from './types';
 import type { ScanFinding, LensCounts, FileVerdict } from './scan-types';
 
 export const MAX_FILES = 150;
@@ -41,6 +41,12 @@ export interface ScanParams {
   onlyPaths?: string[];
   /** SSE event emitter — no-op when omitted (webhook / background mode). */
   send?: ScanSender;
+  /**
+   * Severity threshold passed to all agents.
+   * 'high_and_above' (default) suppresses MEDIUM/LOW — the recommended production setting.
+   * 'all' includes minor findings — controlled by the UI toggle in folder/graph view.
+   */
+  sensitivity?: Sensitivity;
 }
 
 function isBlocking(sev: Severity): boolean {
@@ -100,6 +106,7 @@ export async function runScan({
   octokit,
   onlyPaths,
   send = () => {},
+  sensitivity = 'high_and_above',
 }: ScanParams): Promise<void> {
   const totals: LensCounts = { security: 0, correctness: 0, readability: 0 };
   let scanned = 0;
@@ -222,10 +229,10 @@ export async function runScan({
       }
 
       send('progress', { scanned, total, agent: 'security', path: file.path });
-      const securityReport = await runSecurityAgent(content);
+      const securityReport = await runSecurityAgent(content, sensitivity);
 
       send('progress', { scanned, total, agent: 'correctness', path: file.path });
-      const correctnessReport = await runCorrectnessAgent(content, securityReport.findings);
+      const correctnessReport = await runCorrectnessAgent(content, securityReport.findings, sensitivity);
 
       const reports: AgentReport[] = [securityReport, correctnessReport];
       const fileFindings: ScanFinding[] = reports.flatMap((r) => reportToFindings(file.path, r));

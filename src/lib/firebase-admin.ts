@@ -26,13 +26,21 @@ function getApp(): App {
     _app = existing[0];
     return _app;
   }
+
   const projectId = process.env.FIREBASE_PROJECT_ID ?? process.env.GOOGLE_CLOUD_PROJECT;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const key = privateKey();
-  _app =
-    clientEmail && key
-      ? initializeApp({ credential: cert({ projectId, clientEmail, privateKey: key }) })
-      : initializeApp({ projectId });
+
+  if (clientEmail && key) {
+    _app = initializeApp({
+      credential: cert({ projectId, clientEmail, privateKey: key }),
+      projectId,
+    });
+  } else {
+    // Local dev with ADC (gcloud auth application-default login).
+    _app = initializeApp({ projectId });
+  }
+
   return _app;
 }
 
