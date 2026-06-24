@@ -1,0 +1,6 @@
+{
+  "buildCommand": "NODE_OPTIONS=--experimental-require-module next build",
+  "env": {
+    "NODE_OPTIONS": "--experimental-require-module"
+  }
+}

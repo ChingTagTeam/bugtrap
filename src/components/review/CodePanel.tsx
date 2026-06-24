@@ -260,20 +260,20 @@ export default function CodePanel({
               target="_blank"
               rel="noreferrer"
               style={{ ...headerBtn, textDecoration: 'none', borderColor: 'var(--safe)', color: 'var(--safe)' }}
-              title="View the pull request on GitHub"
+              title="View the commit on GitHub"
             >
               <Check size={14} />
-              <span className="bt-nav-name">PR opened</span>
+              <span className="bt-nav-name">Committed</span>
             </a>
           ) : (
             <button
               onClick={() => void openPr()}
               disabled={prStatus === 'loading'}
               style={{ ...headerBtn, borderColor: 'var(--in)', color: 'var(--in)' }}
-              title="Commit this fix to a new branch and open a pull request"
+              title="Commit this fix directly to the branch"
             >
               {prStatus === 'loading' ? <Loader2 size={14} className="bt-spin" /> : <GitPullRequest size={14} />}
-              <span className="bt-nav-name">{prStatus === 'loading' ? 'Opening…' : 'Open PR'}</span>
+              <span className="bt-nav-name">{prStatus === 'loading' ? 'Committing…' : 'Commit fix'}</span>
             </button>
           )
         )}

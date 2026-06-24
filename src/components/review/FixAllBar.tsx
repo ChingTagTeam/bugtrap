@@ -129,11 +129,11 @@ export default function FixAllBar({
         }),
       });
       const data: { prUrl?: string; error?: string } = await res.json().catch(() => ({}));
-      if (!res.ok || !data.prUrl) throw new Error(data.error ?? 'Could not open the pull request.');
+      if (!res.ok || !data.prUrl) throw new Error(data.error ?? 'Could not commit the fixes.');
       setPrUrl(data.prUrl);
       setPhase('done');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not open the pull request.');
+      setError(e instanceof Error ? e.message : 'Could not commit the fixes.');
       setPhase('error');
     }
   }
@@ -141,7 +141,7 @@ export default function FixAllBar({
   const generating = phase === 'generating';
   const triggerLabel = generating
     ? `Generating fixes ${progress.done}/${progress.total}…`
-    : `Fix all ${filePaths.length} file${filePaths.length !== 1 ? 's' : ''} & open PR`;
+    : `Fix all ${filePaths.length} file${filePaths.length !== 1 ? 's' : ''} & commit to ${branch}`;
 
   // The modal stays up through review → push → done, and also on a push
   // failure (phase 'error' while edits exist) so the user can see why and
@@ -249,7 +249,7 @@ export default function FixAllBar({
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderBottom: '1px solid var(--line)', background: 'var(--bg2)' }}>
               <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--tx)' }}>
-                {phase === 'done' ? 'Fixes pushed' : 'Review fixes before opening a PR'}
+                {phase === 'done' ? 'Fixes committed' : 'Review fixes before committing'}
               </span>
               <span style={{ fontFamily: mono, fontSize: 11.5, color: 'var(--tx3)' }}>
                 {edits.length} file{edits.length !== 1 ? 's' : ''} · {owner}/{repo} → {branch}
@@ -338,7 +338,7 @@ export default function FixAllBar({
                 <>
                   <Check size={16} color="var(--safe)" />
                   <span style={{ color: 'var(--safe)', fontSize: 13.5, fontWeight: 600 }}>
-                    PR opened with {edits.length} file{edits.length !== 1 ? 's' : ''}.
+                    Committed {edits.length} file{edits.length !== 1 ? 's' : ''} to {branch}.
                   </span>
                   <a
                     href={prUrl}
@@ -346,13 +346,13 @@ export default function FixAllBar({
                     rel="noreferrer"
                     style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, background: 'var(--in)', color: '#0e1626', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
                   >
-                    View pull request <ExternalLink size={14} />
+                    View commit <ExternalLink size={14} />
                   </a>
                 </>
               ) : (
                 <>
                   <span style={{ fontFamily: mono, fontSize: 11.5, color: 'var(--tx3)' }}>
-                    {phase === 'opening' ? 'Committing to a new branch…' : 'These edits will be committed to a new branch and opened as one PR.'}
+                    {phase === 'opening' ? `Committing to ${branch}…` : `These edits will be committed directly to ${branch}.`}
                   </span>
                   {phase === 'error' && error && (
                     <span role="alert" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#f58b94', fontFamily: mono, fontSize: 11.5 }}>
@@ -378,7 +378,7 @@ export default function FixAllBar({
                     }}
                   >
                     {phase === 'opening' ? <Loader2 size={14} className="bt-spin" /> : <GitPullRequest size={14} />}
-                    {phase === 'opening' ? 'Opening…' : 'Push fixes & open PR'}
+                    {phase === 'opening' ? 'Committing…' : `Commit to ${branch}`}
                   </button>
                 </>
               )}
