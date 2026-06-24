@@ -85,6 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     const provider = new GithubAuthProvider();
     provider.addScope('repo');
     provider.addScope('read:user');
+    // admin:repo_hook lets the companion feature create push webhooks. The plain
+    // `repo` scope does NOT grant hook management for an OAuth-app token, so
+    // without this createWebhook fails even for repos the user admins.
+    provider.addScope('admin:repo_hook');
     // Force GitHub's authorize screen so the popup returns a fresh access
     // token every time — without this, an already-signed-in Firebase session
     // is restored with no GitHub credential and nothing can be stored.
@@ -122,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactNode {
     const provider = new GithubAuthProvider();
     provider.addScope('repo');
     provider.addScope('read:user');
+    provider.addScope('admin:repo_hook');
     provider.setCustomParameters({ prompt: 'consent' });
     try {
       const result = await signInWithPopup(getFirebaseAuth(), provider);

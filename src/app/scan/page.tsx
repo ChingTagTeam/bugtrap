@@ -102,14 +102,28 @@ export default function ScanPage() {
     );
 
     if (watched) {
-      // Fire-and-forget: registering the webhook must not block the scan, and a
+      // Non-blocking: registering the webhook must not hold up the scan, and a
       // 403 (no admin/push access) just means pushes won't auto-rescan — the
       // one-shot scan still works. Idempotent server-side (skips if registered).
-      void authFetch('/api/github/webhook/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner, repo, branch }),
-      }).catch(() => undefined);
+      // We log the outcome so a silent registration failure is diagnosable in
+      // the browser console instead of vanishing.
+      void (async () => {
+        try {
+          const res = await authFetch('/api/github/webhook/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner, repo, branch }),
+          });
+          const body: unknown = await res.json().catch(() => ({}));
+          if (res.ok) {
+            console.info(`[companion] webhook registered for ${owner}/${repo}`, body);
+          } else {
+            console.error(`[companion] webhook registration failed (${res.status}) for ${owner}/${repo}`, body);
+          }
+        } catch (e) {
+          console.error(`[companion] webhook registration request errored for ${owner}/${repo}`, e);
+        }
+      })();
     }
 
     router.push(`/review/${reviewId}`);
